@@ -66,7 +66,7 @@ void sql_error(void* handle, const char* s);
 *	Reserved words
 \*****************************************************************************/
 %token	<ytoken>	BOOLEAN_ INTEGER DECIMAL DATETIME TEXT BINARY  
-%token	<ytoken>	CREATE DROP TABLE INSERT INTO VALUES
+%token	<ytoken>	CREATE DROP DELETE TABLE INSERT INTO VALUES
 %token	<ytoken>	UPDATE SET WHERE SELECT FROM
 %token	<ytoken>	NOT NULL_ OR AND AS IS
 
@@ -94,12 +94,13 @@ void sql_error(void* handle, const char* s);
 %type		<ytree>	sql_column_definition_list sql_column_definition 
 %type		<ytree>	sql_column_def_type sql_column_def_null_opt
 %type		<ytree>	sql_column_pair_list sql_column_pair 
-%type		<ytree>	sql_where_clause_opt sql_where_clause
+%type		<ytree>	sql_where_clause_opt sql_where_clause sql_select_statement
 %type		<ytree>	sql_column_name_list sql_expression_list sql_expression 
 %type		<ytree>	sql_or_expression sql_and_expression sql_relational_expression
 %type		<ytree>	sql_add_expression sql_mult_expression sql_unary_expression 
 %type		<ytree>	sql_primary_expression sql_literal sql_identifier
 %type		<ytree>	sql_select_expression_list sql_select_expression sql_select_as_opt
+%type		<ytree>	sql_insert_column_name_list_opt
 
 /*****************************************************************************\
 *	Precedence rules
@@ -121,10 +122,11 @@ sql_commands
 	
 sql_command
 	: CREATE TABLE IDENTIFIER '(' sql_column_definition_list ')'
-	| INSERT INTO IDENTIFIER '(' sql_column_name_list ')' VALUES '(' sql_expression_list ')'
+	| INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
 	| UPDATE IDENTIFIER SET sql_column_pair_list sql_where_clause_opt
-	| SELECT sql_select_expression_list FROM IDENTIFIER sql_where_clause_opt 
+	| SELECT sql_select_expression_list sql_select_statement
 	| DROP TABLE IDENTIFIER
+	| DELETE FROM IDENTIFIER sql_where_clause_opt
 	;
 	
 sql_select_expression_list
@@ -143,6 +145,11 @@ sql_select_as_opt
 	| AS NAME
 	;
 	
+sql_select_statement
+   : 
+   | FROM IDENTIFIER sql_where_clause_opt 
+   ;
+
 sql_column_definition_list
 	: sql_column_definition
 	| sql_column_definition_list ',' sql_column_definition
@@ -167,6 +174,11 @@ sql_column_def_null_opt
 	| NOT NULL_
 	;
 	
+sql_insert_column_name_list_opt
+	:
+	| '(' sql_column_name_list ')'
+   ;
+
 sql_column_name_list
 	: IDENTIFIER
 	| sql_column_name_list ',' IDENTIFIER
