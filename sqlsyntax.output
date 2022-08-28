@@ -1,127 +1,123 @@
 Grammar
 
-    0 $accept: sql_commands $end
+    0 $accept: tucansql $end
 
-    1 sql_commands: sql_command
-    2             | sql_commands ';' sql_command
+    1 tucansql: sql_commands
 
-    3 sql_command: CREATE TABLE IDENTIFIER '(' sql_column_definition_list ')'
-    4            | INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
-    5            | UPDATE IDENTIFIER SET sql_column_pair_list sql_where_clause_opt
-    6            | SELECT sql_select_expression_list sql_select_statement
+    2 sql_commands: sql_command
+    3             | sql_commands ';' sql_command
+
+    4 sql_command: CREATE TABLE IDENTIFIER '(' sql_column_definition_list ')'
+    5            | INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
+    6            | UPDATE IDENTIFIER SET sql_column_assign_list sql_where_clause_opt
     7            | DROP TABLE IDENTIFIER
-    8            | DELETE FROM IDENTIFIER sql_where_clause_opt
+    8            | DELETE_ FROM IDENTIFIER sql_where_clause_opt
+    9            | SELECT sql_select_expression_list
+   10            | SELECT sql_select_expression_list_or_star FROM IDENTIFIER sql_where_clause_opt
 
-    9 sql_select_expression_list: sql_select_expression
-   10                           | sql_select_expression_list ',' sql_select_expression
+   11 sql_select_expression_list_or_star: '*'
+   12                                   | sql_select_expression_list
 
-   11 sql_select_expression: '*'
-   12                      | sql_expression sql_select_as_opt
+   13 sql_select_expression_list: sql_select_expression
+   14                           | sql_select_expression_list ',' sql_select_expression
 
-   13 sql_select_as_opt: /* empty */
-   14                  | AS IDENTIFIER
-   15                  | AS NAME
-
-   16 sql_select_statement: /* empty */
-   17                     | FROM IDENTIFIER sql_where_clause_opt
+   15 sql_select_expression: sql_expression
+   16                      | sql_expression AS IDENTIFIER
+   17                      | sql_expression AS NAME
 
    18 sql_column_definition_list: sql_column_definition
    19                           | sql_column_definition_list ',' sql_column_definition
 
-   20 sql_column_definition: IDENTIFIER sql_column_def_type sql_column_def_null_opt
+   20 sql_column_definition: IDENTIFIER sql_column_type
 
-   21 sql_column_def_type: BOOLEAN_
-   22                    | INTEGER
-   23                    | DECIMAL
-   24                    | DATETIME
-   25                    | TEXT
-   26                    | BINARY
+   21 sql_column_type: BOOLEAN_
+   22                | INTEGER
+   23                | DECIMAL
+   24                | DATETIME
+   25                | TEXT
+   26                | BINARY
 
-   27 sql_column_def_null_opt: /* empty */
-   28                        | NULL_
-   29                        | NOT NULL_
+   27 sql_insert_column_name_list_opt: /* empty */
+   28                                | '(' sql_column_name_list ')'
 
-   30 sql_insert_column_name_list_opt: /* empty */
-   31                                | '(' sql_column_name_list ')'
+   29 sql_column_name_list: IDENTIFIER
+   30                     | sql_column_name_list ',' IDENTIFIER
 
-   32 sql_column_name_list: IDENTIFIER
-   33                     | sql_column_name_list ',' IDENTIFIER
+   31 sql_column_assign_list: sql_column_assign
+   32                       | sql_column_assign_list ',' sql_column_assign
 
-   34 sql_column_pair_list: sql_column_pair
-   35                     | sql_column_pair_list ',' sql_column_pair
+   33 sql_column_assign: IDENTIFIER '=' sql_expression
 
-   36 sql_column_pair: IDENTIFIER '=' sql_expression
+   34 sql_where_clause_opt: /* empty */
+   35                     | sql_where_clause
 
-   37 sql_where_clause_opt: /* empty */
-   38                     | sql_where_clause
+   36 sql_where_clause: WHERE sql_expression
 
-   39 sql_where_clause: WHERE sql_expression
+   37 sql_expression_list: sql_expression
+   38                    | sql_expression_list ',' sql_expression
 
-   40 sql_expression_list: sql_expression
-   41                    | sql_expression_list ',' sql_expression
+   39 sql_expression: sql_or_expression
 
-   42 sql_expression: sql_or_expression
+   40 sql_or_expression: sql_and_expression
+   41                  | sql_or_expression OR sql_and_expression
 
-   43 sql_or_expression: sql_and_expression
-   44                  | sql_or_expression OR sql_and_expression
+   42 sql_and_expression: sql_relational_expression
+   43                   | sql_relational_expression AND sql_relational_expression
 
-   45 sql_and_expression: sql_relational_expression
-   46                   | sql_relational_expression AND sql_relational_expression
+   44 sql_relational_expression: sql_add_expression
+   45                          | sql_relational_expression '=' sql_add_expression
+   46                          | sql_relational_expression NE sql_add_expression
+   47                          | sql_relational_expression '<' sql_add_expression
+   48                          | sql_relational_expression LE sql_add_expression
+   49                          | sql_relational_expression '>' sql_add_expression
+   50                          | sql_relational_expression GE sql_add_expression
+   51                          | sql_relational_expression IS NULL_
+   52                          | sql_relational_expression IS NOT NULL_
 
-   47 sql_relational_expression: sql_add_expression
-   48                          | sql_relational_expression '=' sql_add_expression
-   49                          | sql_relational_expression NE sql_add_expression
-   50                          | sql_relational_expression '<' sql_add_expression
-   51                          | sql_relational_expression LE sql_add_expression
-   52                          | sql_relational_expression '>' sql_add_expression
-   53                          | sql_relational_expression GE sql_add_expression
-   54                          | sql_relational_expression IS NULL_
-   55                          | sql_relational_expression IS NOT NULL_
+   53 sql_add_expression: sql_mult_expression
+   54                   | sql_add_expression '+' sql_mult_expression
+   55                   | sql_add_expression '-' sql_mult_expression
 
-   56 sql_add_expression: sql_mult_expression
-   57                   | sql_add_expression '+' sql_mult_expression
-   58                   | sql_add_expression '-' sql_mult_expression
+   56 sql_mult_expression: sql_unary_expression
+   57                    | sql_mult_expression '*' sql_unary_expression
+   58                    | sql_mult_expression '/' sql_unary_expression
 
-   59 sql_mult_expression: sql_unary_expression
-   60                    | sql_mult_expression '*' sql_unary_expression
-   61                    | sql_mult_expression '/' sql_unary_expression
+   59 sql_unary_expression: sql_primary_expression
+   60                     | '+' sql_primary_expression
+   61                     | '-' sql_primary_expression
+   62                     | NOT sql_primary_expression
 
-   62 sql_unary_expression: sql_primary_expression
-   63                     | '+' sql_primary_expression
-   64                     | '-' sql_primary_expression
-   65                     | NOT sql_primary_expression
+   63 sql_primary_expression: sql_literal
+   64                       | sql_identifier
+   65                       | '(' sql_expression ')'
 
-   66 sql_primary_expression: sql_literal
-   67                       | sql_identifier
-   68                       | '(' sql_expression ')'
+   66 sql_literal: BOOLEAN_LITERAL
+   67            | INTEGER_LITERAL
+   68            | DECIMAL_LITERAL
+   69            | DATETIME_LITERAL
+   70            | TEXT_LITERAL
+   71            | BINARY_LITERAL
+   72            | NULL_
 
-   69 sql_literal: BOOLEAN_LITERAL
-   70            | INTEGER_LITERAL
-   71            | DECIMAL_LITERAL
-   72            | DATETIME_LITERAL
-   73            | TEXT_LITERAL
-   74            | BINARY_LITERAL
-   75            | NULL_
-
-   76 sql_identifier: IDENTIFIER
-   77               | IDENTIFIER '.' IDENTIFIER
+   73 sql_identifier: IDENTIFIER
+   74               | IDENTIFIER '.' IDENTIFIER
 
 
 Terminals, with rules where they appear
 
 $end (0) 0
-'(' (40) 3 4 31 68
-')' (41) 3 4 31 68
-'*' (42) 11 60
-'+' (43) 57 63
-',' (44) 10 19 33 35 41
-'-' (45) 58 64
-'.' (46) 77
-'/' (47) 61
-';' (59) 2
-'<' (60) 50
-'=' (61) 36 48
-'>' (62) 52
+'(' (40) 4 5 28 65
+')' (41) 4 5 28 65
+'*' (42) 11 57
+'+' (43) 54 60
+',' (44) 14 19 30 32 38
+'-' (45) 55 61
+'.' (46) 74
+'/' (47) 58
+';' (59) 3
+'<' (60) 47
+'=' (61) 33 45
+'>' (62) 49
 error (256)
 BOOLEAN_ (258) 21
 INTEGER (259) 22
@@ -129,35 +125,35 @@ DECIMAL (260) 23
 DATETIME (261) 24
 TEXT (262) 25
 BINARY (263) 26
-CREATE (264) 3
+CREATE (264) 4
 DROP (265) 7
-DELETE (266) 8
-TABLE (267) 3 7
-INSERT (268) 4
-INTO (269) 4
-VALUES (270) 4
-UPDATE (271) 5
-SET (272) 5
-WHERE (273) 39
-SELECT (274) 6
-FROM (275) 8 17
-NOT (276) 29 55 65
-NULL_ (277) 28 29 54 55 75
-OR (278) 44
-AND (279) 46
-AS (280) 14 15
-IS (281) 54 55
-IDENTIFIER (282) 3 4 5 7 8 14 17 20 32 33 36 76 77
-NAME (283) 15
-BOOLEAN_LITERAL (284) 69
-INTEGER_LITERAL (285) 70
-DECIMAL_LITERAL (286) 71
-DATETIME_LITERAL (287) 72
-TEXT_LITERAL (288) 73
-BINARY_LITERAL (289) 74
-NE (290) 49
-LE (291) 51
-GE (292) 53
+DELETE_ (266) 8
+TABLE (267) 4 7
+INSERT (268) 5
+INTO (269) 5
+VALUES (270) 5
+UPDATE (271) 6
+SET (272) 6
+WHERE (273) 36
+SELECT (274) 9 10
+FROM (275) 8 10
+NOT (276) 52 62
+NULL_ (277) 51 52 72
+OR (278) 41
+AND (279) 43
+AS (280) 16 17
+IS (281) 51 52
+IDENTIFIER (282) 4 5 6 7 8 10 16 20 29 30 33 73 74
+NAME (283) 17
+BOOLEAN_LITERAL (284) 66
+INTEGER_LITERAL (285) 67
+DECIMAL_LITERAL (286) 68
+DATETIME_LITERAL (287) 69
+TEXT_LITERAL (288) 70
+BINARY_LITERAL (289) 71
+NE (290) 46
+LE (291) 48
+GE (292) 50
 SQL_UMINUS (293)
 
 
@@ -165,408 +161,423 @@ Nonterminals, with rules where they appear
 
 $accept (51)
     on left: 0
-sql_commands (52)
-    on left: 1 2, on right: 0 2
-sql_command (53)
-    on left: 3 4 5 6 7 8, on right: 1 2
-sql_select_expression_list (54)
-    on left: 9 10, on right: 6 10
-sql_select_expression (55)
-    on left: 11 12, on right: 9 10
-sql_select_as_opt (56)
-    on left: 13 14 15, on right: 12
-sql_select_statement (57)
-    on left: 16 17, on right: 6
+tucansql (52)
+    on left: 1, on right: 0
+sql_commands (53)
+    on left: 2 3, on right: 1 3
+sql_command (54)
+    on left: 4 5 6 7 8 9 10, on right: 2 3
+sql_select_expression_list_or_star (55)
+    on left: 11 12, on right: 10
+sql_select_expression_list (56)
+    on left: 13 14, on right: 9 12 14
+sql_select_expression (57)
+    on left: 15 16 17, on right: 13 14
 sql_column_definition_list (58)
-    on left: 18 19, on right: 3 19
+    on left: 18 19, on right: 4 19
 sql_column_definition (59)
     on left: 20, on right: 18 19
-sql_column_def_type (60)
+sql_column_type (60)
     on left: 21 22 23 24 25 26, on right: 20
-sql_column_def_null_opt (61)
-    on left: 27 28 29, on right: 20
-sql_insert_column_name_list_opt (62)
-    on left: 30 31, on right: 4
-sql_column_name_list (63)
-    on left: 32 33, on right: 31 33
-sql_column_pair_list (64)
-    on left: 34 35, on right: 5 35
-sql_column_pair (65)
-    on left: 36, on right: 34 35
-sql_where_clause_opt (66)
-    on left: 37 38, on right: 5 8 17
-sql_where_clause (67)
-    on left: 39, on right: 38
-sql_expression_list (68)
-    on left: 40 41, on right: 4 41
-sql_expression (69)
-    on left: 42, on right: 12 36 39 40 41 68
-sql_or_expression (70)
-    on left: 43 44, on right: 42 44
-sql_and_expression (71)
-    on left: 45 46, on right: 43 44
-sql_relational_expression (72)
-    on left: 47 48 49 50 51 52 53 54 55, on right: 45 46 48 49 50 51
-    52 53 54 55
-sql_add_expression (73)
-    on left: 56 57 58, on right: 47 48 49 50 51 52 53 57 58
-sql_mult_expression (74)
-    on left: 59 60 61, on right: 56 57 58 60 61
-sql_unary_expression (75)
-    on left: 62 63 64 65, on right: 59 60 61
-sql_primary_expression (76)
-    on left: 66 67 68, on right: 62 63 64 65
-sql_literal (77)
-    on left: 69 70 71 72 73 74 75, on right: 66
-sql_identifier (78)
-    on left: 76 77, on right: 67
+sql_insert_column_name_list_opt (61)
+    on left: 27 28, on right: 5
+sql_column_name_list (62)
+    on left: 29 30, on right: 28 30
+sql_column_assign_list (63)
+    on left: 31 32, on right: 6 32
+sql_column_assign (64)
+    on left: 33, on right: 31 32
+sql_where_clause_opt (65)
+    on left: 34 35, on right: 6 8 10
+sql_where_clause (66)
+    on left: 36, on right: 35
+sql_expression_list (67)
+    on left: 37 38, on right: 5 38
+sql_expression (68)
+    on left: 39, on right: 15 16 17 33 36 37 38 65
+sql_or_expression (69)
+    on left: 40 41, on right: 39 41
+sql_and_expression (70)
+    on left: 42 43, on right: 40 41
+sql_relational_expression (71)
+    on left: 44 45 46 47 48 49 50 51 52, on right: 42 43 45 46 47 48
+    49 50 51 52
+sql_add_expression (72)
+    on left: 53 54 55, on right: 44 45 46 47 48 49 50 54 55
+sql_mult_expression (73)
+    on left: 56 57 58, on right: 53 54 55 57 58
+sql_unary_expression (74)
+    on left: 59 60 61 62, on right: 56 57 58
+sql_primary_expression (75)
+    on left: 63 64 65, on right: 59 60 61 62
+sql_literal (76)
+    on left: 66 67 68 69 70 71 72, on right: 63
+sql_identifier (77)
+    on left: 73 74, on right: 64
 
 
 state 0
 
-    0 $accept: . sql_commands $end
+    0 $accept: . tucansql $end
 
-    CREATE  shift, and go to state 1
-    DROP    shift, and go to state 2
-    DELETE  shift, and go to state 3
-    INSERT  shift, and go to state 4
-    UPDATE  shift, and go to state 5
-    SELECT  shift, and go to state 6
+    CREATE   shift, and go to state 1
+    DROP     shift, and go to state 2
+    DELETE_  shift, and go to state 3
+    INSERT   shift, and go to state 4
+    UPDATE   shift, and go to state 5
+    SELECT   shift, and go to state 6
 
-    sql_commands  go to state 7
-    sql_command   go to state 8
+    tucansql      go to state 7
+    sql_commands  go to state 8
+    sql_command   go to state 9
 
 
 state 1
 
-    3 sql_command: CREATE . TABLE IDENTIFIER '(' sql_column_definition_list ')'
+    4 sql_command: CREATE . TABLE IDENTIFIER '(' sql_column_definition_list ')'
 
-    TABLE  shift, and go to state 9
+    TABLE  shift, and go to state 10
 
 
 state 2
 
     7 sql_command: DROP . TABLE IDENTIFIER
 
-    TABLE  shift, and go to state 10
+    TABLE  shift, and go to state 11
 
 
 state 3
 
-    8 sql_command: DELETE . FROM IDENTIFIER sql_where_clause_opt
+    8 sql_command: DELETE_ . FROM IDENTIFIER sql_where_clause_opt
 
-    FROM  shift, and go to state 11
+    FROM  shift, and go to state 12
 
 
 state 4
 
-    4 sql_command: INSERT . INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
+    5 sql_command: INSERT . INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
 
-    INTO  shift, and go to state 12
+    INTO  shift, and go to state 13
 
 
 state 5
 
-    5 sql_command: UPDATE . IDENTIFIER SET sql_column_pair_list sql_where_clause_opt
+    6 sql_command: UPDATE . IDENTIFIER SET sql_column_assign_list sql_where_clause_opt
 
-    IDENTIFIER  shift, and go to state 13
+    IDENTIFIER  shift, and go to state 14
 
 
 state 6
 
-    6 sql_command: SELECT . sql_select_expression_list sql_select_statement
+    9 sql_command: SELECT . sql_select_expression_list
+   10            | SELECT . sql_select_expression_list_or_star FROM IDENTIFIER sql_where_clause_opt
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '*'               shift, and go to state 25
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
+    '*'               shift, and go to state 27
 
-    sql_select_expression_list  go to state 27
-    sql_select_expression       go to state 28
-    sql_expression              go to state 29
-    sql_or_expression           go to state 30
-    sql_and_expression          go to state 31
-    sql_relational_expression   go to state 32
-    sql_add_expression          go to state 33
-    sql_mult_expression         go to state 34
-    sql_unary_expression        go to state 35
-    sql_primary_expression      go to state 36
-    sql_literal                 go to state 37
-    sql_identifier              go to state 38
+    sql_select_expression_list_or_star  go to state 28
+    sql_select_expression_list          go to state 29
+    sql_select_expression               go to state 30
+    sql_expression                      go to state 31
+    sql_or_expression                   go to state 32
+    sql_and_expression                  go to state 33
+    sql_relational_expression           go to state 34
+    sql_add_expression                  go to state 35
+    sql_mult_expression                 go to state 36
+    sql_unary_expression                go to state 37
+    sql_primary_expression              go to state 38
+    sql_literal                         go to state 39
+    sql_identifier                      go to state 40
 
 
 state 7
 
-    0 $accept: sql_commands . $end
-    2 sql_commands: sql_commands . ';' sql_command
+    0 $accept: tucansql . $end
 
-    $end  shift, and go to state 39
-    ';'   shift, and go to state 40
+    $end  shift, and go to state 41
 
 
 state 8
 
-    1 sql_commands: sql_command .
+    1 tucansql: sql_commands .
+    3 sql_commands: sql_commands . ';' sql_command
 
-    $default  reduce using rule 1 (sql_commands)
+    ';'  shift, and go to state 42
+
+    $default  reduce using rule 1 (tucansql)
 
 
 state 9
 
-    3 sql_command: CREATE TABLE . IDENTIFIER '(' sql_column_definition_list ')'
+    2 sql_commands: sql_command .
 
-    IDENTIFIER  shift, and go to state 41
+    $default  reduce using rule 2 (sql_commands)
 
 
 state 10
 
-    7 sql_command: DROP TABLE . IDENTIFIER
-
-    IDENTIFIER  shift, and go to state 42
-
-
-state 11
-
-    8 sql_command: DELETE FROM . IDENTIFIER sql_where_clause_opt
+    4 sql_command: CREATE TABLE . IDENTIFIER '(' sql_column_definition_list ')'
 
     IDENTIFIER  shift, and go to state 43
 
 
-state 12
+state 11
 
-    4 sql_command: INSERT INTO . IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
+    7 sql_command: DROP TABLE . IDENTIFIER
 
     IDENTIFIER  shift, and go to state 44
 
 
+state 12
+
+    8 sql_command: DELETE_ FROM . IDENTIFIER sql_where_clause_opt
+
+    IDENTIFIER  shift, and go to state 45
+
+
 state 13
 
-    5 sql_command: UPDATE IDENTIFIER . SET sql_column_pair_list sql_where_clause_opt
+    5 sql_command: INSERT INTO . IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
 
-    SET  shift, and go to state 45
+    IDENTIFIER  shift, and go to state 46
 
 
 state 14
 
-   65 sql_unary_expression: NOT . sql_primary_expression
+    6 sql_command: UPDATE IDENTIFIER . SET sql_column_assign_list sql_where_clause_opt
 
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '('               shift, and go to state 26
-
-    sql_primary_expression  go to state 46
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    SET  shift, and go to state 47
 
 
 state 15
 
-   75 sql_literal: NULL_ .
+   62 sql_unary_expression: NOT . sql_primary_expression
 
-    $default  reduce using rule 75 (sql_literal)
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+
+    sql_primary_expression  go to state 48
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 16
 
-   76 sql_identifier: IDENTIFIER .
-   77               | IDENTIFIER . '.' IDENTIFIER
-
-    '.'  shift, and go to state 47
-
-    $default  reduce using rule 76 (sql_identifier)
-
-
-state 17
-
-   69 sql_literal: BOOLEAN_LITERAL .
-
-    $default  reduce using rule 69 (sql_literal)
-
-
-state 18
-
-   70 sql_literal: INTEGER_LITERAL .
-
-    $default  reduce using rule 70 (sql_literal)
-
-
-state 19
-
-   71 sql_literal: DECIMAL_LITERAL .
-
-    $default  reduce using rule 71 (sql_literal)
-
-
-state 20
-
-   72 sql_literal: DATETIME_LITERAL .
+   72 sql_literal: NULL_ .
 
     $default  reduce using rule 72 (sql_literal)
 
 
+state 17
+
+   73 sql_identifier: IDENTIFIER .
+   74               | IDENTIFIER . '.' IDENTIFIER
+
+    '.'  shift, and go to state 49
+
+    $default  reduce using rule 73 (sql_identifier)
+
+
+state 18
+
+   66 sql_literal: BOOLEAN_LITERAL .
+
+    $default  reduce using rule 66 (sql_literal)
+
+
+state 19
+
+   67 sql_literal: INTEGER_LITERAL .
+
+    $default  reduce using rule 67 (sql_literal)
+
+
+state 20
+
+   68 sql_literal: DECIMAL_LITERAL .
+
+    $default  reduce using rule 68 (sql_literal)
+
+
 state 21
 
-   73 sql_literal: TEXT_LITERAL .
+   69 sql_literal: DATETIME_LITERAL .
 
-    $default  reduce using rule 73 (sql_literal)
+    $default  reduce using rule 69 (sql_literal)
 
 
 state 22
 
-   74 sql_literal: BINARY_LITERAL .
+   70 sql_literal: TEXT_LITERAL .
 
-    $default  reduce using rule 74 (sql_literal)
+    $default  reduce using rule 70 (sql_literal)
 
 
 state 23
 
-   63 sql_unary_expression: '+' . sql_primary_expression
+   71 sql_literal: BINARY_LITERAL .
 
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '('               shift, and go to state 26
-
-    sql_primary_expression  go to state 48
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    $default  reduce using rule 71 (sql_literal)
 
 
 state 24
 
-   64 sql_unary_expression: '-' . sql_primary_expression
+   65 sql_primary_expression: '(' . sql_expression ')'
 
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
-    sql_primary_expression  go to state 49
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_expression             go to state 50
+    sql_or_expression          go to state 32
+    sql_and_expression         go to state 33
+    sql_relational_expression  go to state 34
+    sql_add_expression         go to state 35
+    sql_mult_expression        go to state 36
+    sql_unary_expression       go to state 37
+    sql_primary_expression     go to state 38
+    sql_literal                go to state 39
+    sql_identifier             go to state 40
 
 
 state 25
 
-   11 sql_select_expression: '*' .
+   61 sql_unary_expression: '-' . sql_primary_expression
 
-    $default  reduce using rule 11 (sql_select_expression)
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+
+    sql_primary_expression  go to state 51
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 26
 
-   68 sql_primary_expression: '(' . sql_expression ')'
+   60 sql_unary_expression: '+' . sql_primary_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
 
-    sql_expression             go to state 50
-    sql_or_expression          go to state 30
-    sql_and_expression         go to state 31
-    sql_relational_expression  go to state 32
-    sql_add_expression         go to state 33
-    sql_mult_expression        go to state 34
-    sql_unary_expression       go to state 35
-    sql_primary_expression     go to state 36
-    sql_literal                go to state 37
-    sql_identifier             go to state 38
+    sql_primary_expression  go to state 52
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 27
 
-    6 sql_command: SELECT sql_select_expression_list . sql_select_statement
-   10 sql_select_expression_list: sql_select_expression_list . ',' sql_select_expression
+   11 sql_select_expression_list_or_star: '*' .
 
-    FROM  shift, and go to state 51
-    ','   shift, and go to state 52
-
-    $default  reduce using rule 16 (sql_select_statement)
-
-    sql_select_statement  go to state 53
+    $default  reduce using rule 11 (sql_select_expression_list_or_star)
 
 
 state 28
 
-    9 sql_select_expression_list: sql_select_expression .
+   10 sql_command: SELECT sql_select_expression_list_or_star . FROM IDENTIFIER sql_where_clause_opt
 
-    $default  reduce using rule 9 (sql_select_expression_list)
+    FROM  shift, and go to state 53
 
 
 state 29
 
-   12 sql_select_expression: sql_expression . sql_select_as_opt
+    9 sql_command: SELECT sql_select_expression_list .
+   12 sql_select_expression_list_or_star: sql_select_expression_list .
+   14 sql_select_expression_list: sql_select_expression_list . ',' sql_select_expression
 
-    AS  shift, and go to state 54
+    ','  shift, and go to state 54
 
-    $default  reduce using rule 13 (sql_select_as_opt)
-
-    sql_select_as_opt  go to state 55
+    FROM      reduce using rule 12 (sql_select_expression_list_or_star)
+    $default  reduce using rule 9 (sql_command)
 
 
 state 30
 
-   42 sql_expression: sql_or_expression .
-   44 sql_or_expression: sql_or_expression . OR sql_and_expression
+   13 sql_select_expression_list: sql_select_expression .
 
-    OR  shift, and go to state 56
-
-    $default  reduce using rule 42 (sql_expression)
+    $default  reduce using rule 13 (sql_select_expression_list)
 
 
 state 31
 
-   43 sql_or_expression: sql_and_expression .
+   15 sql_select_expression: sql_expression .
+   16                      | sql_expression . AS IDENTIFIER
+   17                      | sql_expression . AS NAME
 
-    $default  reduce using rule 43 (sql_or_expression)
+    AS  shift, and go to state 55
+
+    $default  reduce using rule 15 (sql_select_expression)
 
 
 state 32
 
-   45 sql_and_expression: sql_relational_expression .
-   46                   | sql_relational_expression . AND sql_relational_expression
-   48 sql_relational_expression: sql_relational_expression . '=' sql_add_expression
-   49                          | sql_relational_expression . NE sql_add_expression
-   50                          | sql_relational_expression . '<' sql_add_expression
-   51                          | sql_relational_expression . LE sql_add_expression
-   52                          | sql_relational_expression . '>' sql_add_expression
-   53                          | sql_relational_expression . GE sql_add_expression
-   54                          | sql_relational_expression . IS NULL_
-   55                          | sql_relational_expression . IS NOT NULL_
+   39 sql_expression: sql_or_expression .
+   41 sql_or_expression: sql_or_expression . OR sql_and_expression
+
+    OR  shift, and go to state 56
+
+    $default  reduce using rule 39 (sql_expression)
+
+
+state 33
+
+   40 sql_or_expression: sql_and_expression .
+
+    $default  reduce using rule 40 (sql_or_expression)
+
+
+state 34
+
+   42 sql_and_expression: sql_relational_expression .
+   43                   | sql_relational_expression . AND sql_relational_expression
+   45 sql_relational_expression: sql_relational_expression . '=' sql_add_expression
+   46                          | sql_relational_expression . NE sql_add_expression
+   47                          | sql_relational_expression . '<' sql_add_expression
+   48                          | sql_relational_expression . LE sql_add_expression
+   49                          | sql_relational_expression . '>' sql_add_expression
+   50                          | sql_relational_expression . GE sql_add_expression
+   51                          | sql_relational_expression . IS NULL_
+   52                          | sql_relational_expression . IS NOT NULL_
 
     AND  shift, and go to state 57
     IS   shift, and go to state 58
@@ -577,282 +588,267 @@ state 32
     '<'  shift, and go to state 63
     '>'  shift, and go to state 64
 
-    $default  reduce using rule 45 (sql_and_expression)
-
-
-state 33
-
-   47 sql_relational_expression: sql_add_expression .
-   57 sql_add_expression: sql_add_expression . '+' sql_mult_expression
-   58                   | sql_add_expression . '-' sql_mult_expression
-
-    '+'  shift, and go to state 65
-    '-'  shift, and go to state 66
-
-    $default  reduce using rule 47 (sql_relational_expression)
-
-
-state 34
-
-   56 sql_add_expression: sql_mult_expression .
-   60 sql_mult_expression: sql_mult_expression . '*' sql_unary_expression
-   61                    | sql_mult_expression . '/' sql_unary_expression
-
-    '*'  shift, and go to state 67
-    '/'  shift, and go to state 68
-
-    $default  reduce using rule 56 (sql_add_expression)
+    $default  reduce using rule 42 (sql_and_expression)
 
 
 state 35
 
-   59 sql_mult_expression: sql_unary_expression .
+   44 sql_relational_expression: sql_add_expression .
+   54 sql_add_expression: sql_add_expression . '+' sql_mult_expression
+   55                   | sql_add_expression . '-' sql_mult_expression
 
-    $default  reduce using rule 59 (sql_mult_expression)
+    '-'  shift, and go to state 65
+    '+'  shift, and go to state 66
+
+    $default  reduce using rule 44 (sql_relational_expression)
 
 
 state 36
 
-   62 sql_unary_expression: sql_primary_expression .
+   53 sql_add_expression: sql_mult_expression .
+   57 sql_mult_expression: sql_mult_expression . '*' sql_unary_expression
+   58                    | sql_mult_expression . '/' sql_unary_expression
 
-    $default  reduce using rule 62 (sql_unary_expression)
+    '*'  shift, and go to state 67
+    '/'  shift, and go to state 68
+
+    $default  reduce using rule 53 (sql_add_expression)
 
 
 state 37
 
-   66 sql_primary_expression: sql_literal .
+   56 sql_mult_expression: sql_unary_expression .
 
-    $default  reduce using rule 66 (sql_primary_expression)
+    $default  reduce using rule 56 (sql_mult_expression)
 
 
 state 38
 
-   67 sql_primary_expression: sql_identifier .
+   59 sql_unary_expression: sql_primary_expression .
 
-    $default  reduce using rule 67 (sql_primary_expression)
+    $default  reduce using rule 59 (sql_unary_expression)
 
 
 state 39
 
-    0 $accept: sql_commands $end .
+   63 sql_primary_expression: sql_literal .
 
-    $default  accept
+    $default  reduce using rule 63 (sql_primary_expression)
 
 
 state 40
 
-    2 sql_commands: sql_commands ';' . sql_command
+   64 sql_primary_expression: sql_identifier .
 
-    CREATE  shift, and go to state 1
-    DROP    shift, and go to state 2
-    DELETE  shift, and go to state 3
-    INSERT  shift, and go to state 4
-    UPDATE  shift, and go to state 5
-    SELECT  shift, and go to state 6
-
-    sql_command  go to state 69
+    $default  reduce using rule 64 (sql_primary_expression)
 
 
 state 41
 
-    3 sql_command: CREATE TABLE IDENTIFIER . '(' sql_column_definition_list ')'
+    0 $accept: tucansql $end .
+
+    $default  accept
+
+
+state 42
+
+    3 sql_commands: sql_commands ';' . sql_command
+
+    CREATE   shift, and go to state 1
+    DROP     shift, and go to state 2
+    DELETE_  shift, and go to state 3
+    INSERT   shift, and go to state 4
+    UPDATE   shift, and go to state 5
+    SELECT   shift, and go to state 6
+
+    sql_command  go to state 69
+
+
+state 43
+
+    4 sql_command: CREATE TABLE IDENTIFIER . '(' sql_column_definition_list ')'
 
     '('  shift, and go to state 70
 
 
-state 42
+state 44
 
     7 sql_command: DROP TABLE IDENTIFIER .
 
     $default  reduce using rule 7 (sql_command)
 
 
-state 43
+state 45
 
-    8 sql_command: DELETE FROM IDENTIFIER . sql_where_clause_opt
+    8 sql_command: DELETE_ FROM IDENTIFIER . sql_where_clause_opt
 
     WHERE  shift, and go to state 71
 
-    $default  reduce using rule 37 (sql_where_clause_opt)
+    $default  reduce using rule 34 (sql_where_clause_opt)
 
     sql_where_clause_opt  go to state 72
     sql_where_clause      go to state 73
 
 
-state 44
+state 46
 
-    4 sql_command: INSERT INTO IDENTIFIER . sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
+    5 sql_command: INSERT INTO IDENTIFIER . sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
 
     '('  shift, and go to state 74
 
-    $default  reduce using rule 30 (sql_insert_column_name_list_opt)
+    $default  reduce using rule 27 (sql_insert_column_name_list_opt)
 
     sql_insert_column_name_list_opt  go to state 75
 
 
-state 45
+state 47
 
-    5 sql_command: UPDATE IDENTIFIER SET . sql_column_pair_list sql_where_clause_opt
+    6 sql_command: UPDATE IDENTIFIER SET . sql_column_assign_list sql_where_clause_opt
 
     IDENTIFIER  shift, and go to state 76
 
-    sql_column_pair_list  go to state 77
-    sql_column_pair       go to state 78
-
-
-state 46
-
-   65 sql_unary_expression: NOT sql_primary_expression .
-
-    $default  reduce using rule 65 (sql_unary_expression)
-
-
-state 47
-
-   77 sql_identifier: IDENTIFIER '.' . IDENTIFIER
-
-    IDENTIFIER  shift, and go to state 79
+    sql_column_assign_list  go to state 77
+    sql_column_assign       go to state 78
 
 
 state 48
 
-   63 sql_unary_expression: '+' sql_primary_expression .
+   62 sql_unary_expression: NOT sql_primary_expression .
 
-    $default  reduce using rule 63 (sql_unary_expression)
+    $default  reduce using rule 62 (sql_unary_expression)
 
 
 state 49
 
-   64 sql_unary_expression: '-' sql_primary_expression .
+   74 sql_identifier: IDENTIFIER '.' . IDENTIFIER
 
-    $default  reduce using rule 64 (sql_unary_expression)
+    IDENTIFIER  shift, and go to state 79
 
 
 state 50
 
-   68 sql_primary_expression: '(' sql_expression . ')'
+   65 sql_primary_expression: '(' sql_expression . ')'
 
     ')'  shift, and go to state 80
 
 
 state 51
 
-   17 sql_select_statement: FROM . IDENTIFIER sql_where_clause_opt
+   61 sql_unary_expression: '-' sql_primary_expression .
 
-    IDENTIFIER  shift, and go to state 81
+    $default  reduce using rule 61 (sql_unary_expression)
 
 
 state 52
 
-   10 sql_select_expression_list: sql_select_expression_list ',' . sql_select_expression
+   60 sql_unary_expression: '+' sql_primary_expression .
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '*'               shift, and go to state 25
-    '('               shift, and go to state 26
-
-    sql_select_expression      go to state 82
-    sql_expression             go to state 29
-    sql_or_expression          go to state 30
-    sql_and_expression         go to state 31
-    sql_relational_expression  go to state 32
-    sql_add_expression         go to state 33
-    sql_mult_expression        go to state 34
-    sql_unary_expression       go to state 35
-    sql_primary_expression     go to state 36
-    sql_literal                go to state 37
-    sql_identifier             go to state 38
+    $default  reduce using rule 60 (sql_unary_expression)
 
 
 state 53
 
-    6 sql_command: SELECT sql_select_expression_list sql_select_statement .
+   10 sql_command: SELECT sql_select_expression_list_or_star FROM . IDENTIFIER sql_where_clause_opt
 
-    $default  reduce using rule 6 (sql_command)
+    IDENTIFIER  shift, and go to state 81
 
 
 state 54
 
-   14 sql_select_as_opt: AS . IDENTIFIER
-   15                  | AS . NAME
+   14 sql_select_expression_list: sql_select_expression_list ',' . sql_select_expression
+
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
+
+    sql_select_expression      go to state 82
+    sql_expression             go to state 31
+    sql_or_expression          go to state 32
+    sql_and_expression         go to state 33
+    sql_relational_expression  go to state 34
+    sql_add_expression         go to state 35
+    sql_mult_expression        go to state 36
+    sql_unary_expression       go to state 37
+    sql_primary_expression     go to state 38
+    sql_literal                go to state 39
+    sql_identifier             go to state 40
+
+
+state 55
+
+   16 sql_select_expression: sql_expression AS . IDENTIFIER
+   17                      | sql_expression AS . NAME
 
     IDENTIFIER  shift, and go to state 83
     NAME        shift, and go to state 84
 
 
-state 55
-
-   12 sql_select_expression: sql_expression sql_select_as_opt .
-
-    $default  reduce using rule 12 (sql_select_expression)
-
-
 state 56
 
-   44 sql_or_expression: sql_or_expression OR . sql_and_expression
+   41 sql_or_expression: sql_or_expression OR . sql_and_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_and_expression         go to state 85
-    sql_relational_expression  go to state 32
-    sql_add_expression         go to state 33
-    sql_mult_expression        go to state 34
-    sql_unary_expression       go to state 35
-    sql_primary_expression     go to state 36
-    sql_literal                go to state 37
-    sql_identifier             go to state 38
+    sql_relational_expression  go to state 34
+    sql_add_expression         go to state 35
+    sql_mult_expression        go to state 36
+    sql_unary_expression       go to state 37
+    sql_primary_expression     go to state 38
+    sql_literal                go to state 39
+    sql_identifier             go to state 40
 
 
 state 57
 
-   46 sql_and_expression: sql_relational_expression AND . sql_relational_expression
+   43 sql_and_expression: sql_relational_expression AND . sql_relational_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_relational_expression  go to state 86
-    sql_add_expression         go to state 33
-    sql_mult_expression        go to state 34
-    sql_unary_expression       go to state 35
-    sql_primary_expression     go to state 36
-    sql_literal                go to state 37
-    sql_identifier             go to state 38
+    sql_add_expression         go to state 35
+    sql_mult_expression        go to state 36
+    sql_unary_expression       go to state 37
+    sql_primary_expression     go to state 38
+    sql_literal                go to state 39
+    sql_identifier             go to state 40
 
 
 state 58
 
-   54 sql_relational_expression: sql_relational_expression IS . NULL_
-   55                          | sql_relational_expression IS . NOT NULL_
+   51 sql_relational_expression: sql_relational_expression IS . NULL_
+   52                          | sql_relational_expression IS . NOT NULL_
 
     NOT    shift, and go to state 87
     NULL_  shift, and go to state 88
@@ -860,258 +856,258 @@ state 58
 
 state 59
 
-   49 sql_relational_expression: sql_relational_expression NE . sql_add_expression
+   46 sql_relational_expression: sql_relational_expression NE . sql_add_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_add_expression      go to state 89
-    sql_mult_expression     go to state 34
-    sql_unary_expression    go to state 35
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_mult_expression     go to state 36
+    sql_unary_expression    go to state 37
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 60
 
-   51 sql_relational_expression: sql_relational_expression LE . sql_add_expression
+   48 sql_relational_expression: sql_relational_expression LE . sql_add_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_add_expression      go to state 90
-    sql_mult_expression     go to state 34
-    sql_unary_expression    go to state 35
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_mult_expression     go to state 36
+    sql_unary_expression    go to state 37
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 61
 
-   53 sql_relational_expression: sql_relational_expression GE . sql_add_expression
+   50 sql_relational_expression: sql_relational_expression GE . sql_add_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_add_expression      go to state 91
-    sql_mult_expression     go to state 34
-    sql_unary_expression    go to state 35
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_mult_expression     go to state 36
+    sql_unary_expression    go to state 37
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 62
 
-   48 sql_relational_expression: sql_relational_expression '=' . sql_add_expression
+   45 sql_relational_expression: sql_relational_expression '=' . sql_add_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_add_expression      go to state 92
-    sql_mult_expression     go to state 34
-    sql_unary_expression    go to state 35
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_mult_expression     go to state 36
+    sql_unary_expression    go to state 37
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 63
 
-   50 sql_relational_expression: sql_relational_expression '<' . sql_add_expression
+   47 sql_relational_expression: sql_relational_expression '<' . sql_add_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_add_expression      go to state 93
-    sql_mult_expression     go to state 34
-    sql_unary_expression    go to state 35
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_mult_expression     go to state 36
+    sql_unary_expression    go to state 37
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 64
 
-   52 sql_relational_expression: sql_relational_expression '>' . sql_add_expression
+   49 sql_relational_expression: sql_relational_expression '>' . sql_add_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_add_expression      go to state 94
-    sql_mult_expression     go to state 34
-    sql_unary_expression    go to state 35
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_mult_expression     go to state 36
+    sql_unary_expression    go to state 37
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 65
 
-   57 sql_add_expression: sql_add_expression '+' . sql_mult_expression
+   55 sql_add_expression: sql_add_expression '-' . sql_mult_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_mult_expression     go to state 95
-    sql_unary_expression    go to state 35
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_unary_expression    go to state 37
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 66
 
-   58 sql_add_expression: sql_add_expression '-' . sql_mult_expression
+   54 sql_add_expression: sql_add_expression '+' . sql_mult_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_mult_expression     go to state 96
-    sql_unary_expression    go to state 35
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_unary_expression    go to state 37
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 67
 
-   60 sql_mult_expression: sql_mult_expression '*' . sql_unary_expression
+   57 sql_mult_expression: sql_mult_expression '*' . sql_unary_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_unary_expression    go to state 97
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 68
 
-   61 sql_mult_expression: sql_mult_expression '/' . sql_unary_expression
+   58 sql_mult_expression: sql_mult_expression '/' . sql_unary_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_unary_expression    go to state 98
-    sql_primary_expression  go to state 36
-    sql_literal             go to state 37
-    sql_identifier          go to state 38
+    sql_primary_expression  go to state 38
+    sql_literal             go to state 39
+    sql_identifier          go to state 40
 
 
 state 69
 
-    2 sql_commands: sql_commands ';' sql_command .
+    3 sql_commands: sql_commands ';' sql_command .
 
-    $default  reduce using rule 2 (sql_commands)
+    $default  reduce using rule 3 (sql_commands)
 
 
 state 70
 
-    3 sql_command: CREATE TABLE IDENTIFIER '(' . sql_column_definition_list ')'
+    4 sql_command: CREATE TABLE IDENTIFIER '(' . sql_column_definition_list ')'
 
     IDENTIFIER  shift, and go to state 99
 
@@ -1121,50 +1117,50 @@ state 70
 
 state 71
 
-   39 sql_where_clause: WHERE . sql_expression
+   36 sql_where_clause: WHERE . sql_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_expression             go to state 102
-    sql_or_expression          go to state 30
-    sql_and_expression         go to state 31
-    sql_relational_expression  go to state 32
-    sql_add_expression         go to state 33
-    sql_mult_expression        go to state 34
-    sql_unary_expression       go to state 35
-    sql_primary_expression     go to state 36
-    sql_literal                go to state 37
-    sql_identifier             go to state 38
+    sql_or_expression          go to state 32
+    sql_and_expression         go to state 33
+    sql_relational_expression  go to state 34
+    sql_add_expression         go to state 35
+    sql_mult_expression        go to state 36
+    sql_unary_expression       go to state 37
+    sql_primary_expression     go to state 38
+    sql_literal                go to state 39
+    sql_identifier             go to state 40
 
 
 state 72
 
-    8 sql_command: DELETE FROM IDENTIFIER sql_where_clause_opt .
+    8 sql_command: DELETE_ FROM IDENTIFIER sql_where_clause_opt .
 
     $default  reduce using rule 8 (sql_command)
 
 
 state 73
 
-   38 sql_where_clause_opt: sql_where_clause .
+   35 sql_where_clause_opt: sql_where_clause .
 
-    $default  reduce using rule 38 (sql_where_clause_opt)
+    $default  reduce using rule 35 (sql_where_clause_opt)
 
 
 state 74
 
-   31 sql_insert_column_name_list_opt: '(' . sql_column_name_list ')'
+   28 sql_insert_column_name_list_opt: '(' . sql_column_name_list ')'
 
     IDENTIFIER  shift, and go to state 103
 
@@ -1173,27 +1169,27 @@ state 74
 
 state 75
 
-    4 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt . VALUES '(' sql_expression_list ')'
+    5 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt . VALUES '(' sql_expression_list ')'
 
     VALUES  shift, and go to state 105
 
 
 state 76
 
-   36 sql_column_pair: IDENTIFIER . '=' sql_expression
+   33 sql_column_assign: IDENTIFIER . '=' sql_expression
 
     '='  shift, and go to state 106
 
 
 state 77
 
-    5 sql_command: UPDATE IDENTIFIER SET sql_column_pair_list . sql_where_clause_opt
-   35 sql_column_pair_list: sql_column_pair_list . ',' sql_column_pair
+    6 sql_command: UPDATE IDENTIFIER SET sql_column_assign_list . sql_where_clause_opt
+   32 sql_column_assign_list: sql_column_assign_list . ',' sql_column_assign
 
     WHERE  shift, and go to state 71
     ','    shift, and go to state 107
 
-    $default  reduce using rule 37 (sql_where_clause_opt)
+    $default  reduce using rule 34 (sql_where_clause_opt)
 
     sql_where_clause_opt  go to state 108
     sql_where_clause      go to state 73
@@ -1201,32 +1197,32 @@ state 77
 
 state 78
 
-   34 sql_column_pair_list: sql_column_pair .
+   31 sql_column_assign_list: sql_column_assign .
 
-    $default  reduce using rule 34 (sql_column_pair_list)
+    $default  reduce using rule 31 (sql_column_assign_list)
 
 
 state 79
 
-   77 sql_identifier: IDENTIFIER '.' IDENTIFIER .
+   74 sql_identifier: IDENTIFIER '.' IDENTIFIER .
 
-    $default  reduce using rule 77 (sql_identifier)
+    $default  reduce using rule 74 (sql_identifier)
 
 
 state 80
 
-   68 sql_primary_expression: '(' sql_expression ')' .
+   65 sql_primary_expression: '(' sql_expression ')' .
 
-    $default  reduce using rule 68 (sql_primary_expression)
+    $default  reduce using rule 65 (sql_primary_expression)
 
 
 state 81
 
-   17 sql_select_statement: FROM IDENTIFIER . sql_where_clause_opt
+   10 sql_command: SELECT sql_select_expression_list_or_star FROM IDENTIFIER . sql_where_clause_opt
 
     WHERE  shift, and go to state 71
 
-    $default  reduce using rule 37 (sql_where_clause_opt)
+    $default  reduce using rule 34 (sql_where_clause_opt)
 
     sql_where_clause_opt  go to state 109
     sql_where_clause      go to state 73
@@ -1234,43 +1230,43 @@ state 81
 
 state 82
 
-   10 sql_select_expression_list: sql_select_expression_list ',' sql_select_expression .
+   14 sql_select_expression_list: sql_select_expression_list ',' sql_select_expression .
 
-    $default  reduce using rule 10 (sql_select_expression_list)
+    $default  reduce using rule 14 (sql_select_expression_list)
 
 
 state 83
 
-   14 sql_select_as_opt: AS IDENTIFIER .
+   16 sql_select_expression: sql_expression AS IDENTIFIER .
 
-    $default  reduce using rule 14 (sql_select_as_opt)
+    $default  reduce using rule 16 (sql_select_expression)
 
 
 state 84
 
-   15 sql_select_as_opt: AS NAME .
+   17 sql_select_expression: sql_expression AS NAME .
 
-    $default  reduce using rule 15 (sql_select_as_opt)
+    $default  reduce using rule 17 (sql_select_expression)
 
 
 state 85
 
-   44 sql_or_expression: sql_or_expression OR sql_and_expression .
+   41 sql_or_expression: sql_or_expression OR sql_and_expression .
 
-    $default  reduce using rule 44 (sql_or_expression)
+    $default  reduce using rule 41 (sql_or_expression)
 
 
 state 86
 
-   46 sql_and_expression: sql_relational_expression AND sql_relational_expression .
-   48 sql_relational_expression: sql_relational_expression . '=' sql_add_expression
-   49                          | sql_relational_expression . NE sql_add_expression
-   50                          | sql_relational_expression . '<' sql_add_expression
-   51                          | sql_relational_expression . LE sql_add_expression
-   52                          | sql_relational_expression . '>' sql_add_expression
-   53                          | sql_relational_expression . GE sql_add_expression
-   54                          | sql_relational_expression . IS NULL_
-   55                          | sql_relational_expression . IS NOT NULL_
+   43 sql_and_expression: sql_relational_expression AND sql_relational_expression .
+   45 sql_relational_expression: sql_relational_expression . '=' sql_add_expression
+   46                          | sql_relational_expression . NE sql_add_expression
+   47                          | sql_relational_expression . '<' sql_add_expression
+   48                          | sql_relational_expression . LE sql_add_expression
+   49                          | sql_relational_expression . '>' sql_add_expression
+   50                          | sql_relational_expression . GE sql_add_expression
+   51                          | sql_relational_expression . IS NULL_
+   52                          | sql_relational_expression . IS NOT NULL_
 
     IS   shift, and go to state 58
     NE   shift, and go to state 59
@@ -1280,136 +1276,136 @@ state 86
     '<'  shift, and go to state 63
     '>'  shift, and go to state 64
 
-    $default  reduce using rule 46 (sql_and_expression)
+    $default  reduce using rule 43 (sql_and_expression)
 
 
 state 87
 
-   55 sql_relational_expression: sql_relational_expression IS NOT . NULL_
+   52 sql_relational_expression: sql_relational_expression IS NOT . NULL_
 
     NULL_  shift, and go to state 110
 
 
 state 88
 
-   54 sql_relational_expression: sql_relational_expression IS NULL_ .
-
-    $default  reduce using rule 54 (sql_relational_expression)
-
-
-state 89
-
-   49 sql_relational_expression: sql_relational_expression NE sql_add_expression .
-   57 sql_add_expression: sql_add_expression . '+' sql_mult_expression
-   58                   | sql_add_expression . '-' sql_mult_expression
-
-    '+'  shift, and go to state 65
-    '-'  shift, and go to state 66
-
-    $default  reduce using rule 49 (sql_relational_expression)
-
-
-state 90
-
-   51 sql_relational_expression: sql_relational_expression LE sql_add_expression .
-   57 sql_add_expression: sql_add_expression . '+' sql_mult_expression
-   58                   | sql_add_expression . '-' sql_mult_expression
-
-    '+'  shift, and go to state 65
-    '-'  shift, and go to state 66
+   51 sql_relational_expression: sql_relational_expression IS NULL_ .
 
     $default  reduce using rule 51 (sql_relational_expression)
 
 
-state 91
+state 89
 
-   53 sql_relational_expression: sql_relational_expression GE sql_add_expression .
-   57 sql_add_expression: sql_add_expression . '+' sql_mult_expression
-   58                   | sql_add_expression . '-' sql_mult_expression
+   46 sql_relational_expression: sql_relational_expression NE sql_add_expression .
+   54 sql_add_expression: sql_add_expression . '+' sql_mult_expression
+   55                   | sql_add_expression . '-' sql_mult_expression
 
-    '+'  shift, and go to state 65
-    '-'  shift, and go to state 66
+    '-'  shift, and go to state 65
+    '+'  shift, and go to state 66
 
-    $default  reduce using rule 53 (sql_relational_expression)
+    $default  reduce using rule 46 (sql_relational_expression)
 
 
-state 92
+state 90
 
-   48 sql_relational_expression: sql_relational_expression '=' sql_add_expression .
-   57 sql_add_expression: sql_add_expression . '+' sql_mult_expression
-   58                   | sql_add_expression . '-' sql_mult_expression
+   48 sql_relational_expression: sql_relational_expression LE sql_add_expression .
+   54 sql_add_expression: sql_add_expression . '+' sql_mult_expression
+   55                   | sql_add_expression . '-' sql_mult_expression
 
-    '+'  shift, and go to state 65
-    '-'  shift, and go to state 66
+    '-'  shift, and go to state 65
+    '+'  shift, and go to state 66
 
     $default  reduce using rule 48 (sql_relational_expression)
 
 
-state 93
+state 91
 
-   50 sql_relational_expression: sql_relational_expression '<' sql_add_expression .
-   57 sql_add_expression: sql_add_expression . '+' sql_mult_expression
-   58                   | sql_add_expression . '-' sql_mult_expression
+   50 sql_relational_expression: sql_relational_expression GE sql_add_expression .
+   54 sql_add_expression: sql_add_expression . '+' sql_mult_expression
+   55                   | sql_add_expression . '-' sql_mult_expression
 
-    '+'  shift, and go to state 65
-    '-'  shift, and go to state 66
+    '-'  shift, and go to state 65
+    '+'  shift, and go to state 66
 
     $default  reduce using rule 50 (sql_relational_expression)
 
 
+state 92
+
+   45 sql_relational_expression: sql_relational_expression '=' sql_add_expression .
+   54 sql_add_expression: sql_add_expression . '+' sql_mult_expression
+   55                   | sql_add_expression . '-' sql_mult_expression
+
+    '-'  shift, and go to state 65
+    '+'  shift, and go to state 66
+
+    $default  reduce using rule 45 (sql_relational_expression)
+
+
+state 93
+
+   47 sql_relational_expression: sql_relational_expression '<' sql_add_expression .
+   54 sql_add_expression: sql_add_expression . '+' sql_mult_expression
+   55                   | sql_add_expression . '-' sql_mult_expression
+
+    '-'  shift, and go to state 65
+    '+'  shift, and go to state 66
+
+    $default  reduce using rule 47 (sql_relational_expression)
+
+
 state 94
 
-   52 sql_relational_expression: sql_relational_expression '>' sql_add_expression .
-   57 sql_add_expression: sql_add_expression . '+' sql_mult_expression
-   58                   | sql_add_expression . '-' sql_mult_expression
+   49 sql_relational_expression: sql_relational_expression '>' sql_add_expression .
+   54 sql_add_expression: sql_add_expression . '+' sql_mult_expression
+   55                   | sql_add_expression . '-' sql_mult_expression
 
-    '+'  shift, and go to state 65
-    '-'  shift, and go to state 66
+    '-'  shift, and go to state 65
+    '+'  shift, and go to state 66
 
-    $default  reduce using rule 52 (sql_relational_expression)
+    $default  reduce using rule 49 (sql_relational_expression)
 
 
 state 95
 
-   57 sql_add_expression: sql_add_expression '+' sql_mult_expression .
-   60 sql_mult_expression: sql_mult_expression . '*' sql_unary_expression
-   61                    | sql_mult_expression . '/' sql_unary_expression
+   55 sql_add_expression: sql_add_expression '-' sql_mult_expression .
+   57 sql_mult_expression: sql_mult_expression . '*' sql_unary_expression
+   58                    | sql_mult_expression . '/' sql_unary_expression
 
     '*'  shift, and go to state 67
     '/'  shift, and go to state 68
 
-    $default  reduce using rule 57 (sql_add_expression)
+    $default  reduce using rule 55 (sql_add_expression)
 
 
 state 96
 
-   58 sql_add_expression: sql_add_expression '-' sql_mult_expression .
-   60 sql_mult_expression: sql_mult_expression . '*' sql_unary_expression
-   61                    | sql_mult_expression . '/' sql_unary_expression
+   54 sql_add_expression: sql_add_expression '+' sql_mult_expression .
+   57 sql_mult_expression: sql_mult_expression . '*' sql_unary_expression
+   58                    | sql_mult_expression . '/' sql_unary_expression
 
     '*'  shift, and go to state 67
     '/'  shift, and go to state 68
 
-    $default  reduce using rule 58 (sql_add_expression)
+    $default  reduce using rule 54 (sql_add_expression)
 
 
 state 97
 
-   60 sql_mult_expression: sql_mult_expression '*' sql_unary_expression .
+   57 sql_mult_expression: sql_mult_expression '*' sql_unary_expression .
 
-    $default  reduce using rule 60 (sql_mult_expression)
+    $default  reduce using rule 57 (sql_mult_expression)
 
 
 state 98
 
-   61 sql_mult_expression: sql_mult_expression '/' sql_unary_expression .
+   58 sql_mult_expression: sql_mult_expression '/' sql_unary_expression .
 
-    $default  reduce using rule 61 (sql_mult_expression)
+    $default  reduce using rule 58 (sql_mult_expression)
 
 
 state 99
 
-   20 sql_column_definition: IDENTIFIER . sql_column_def_type sql_column_def_null_opt
+   20 sql_column_definition: IDENTIFIER . sql_column_type
 
     BOOLEAN_  shift, and go to state 111
     INTEGER   shift, and go to state 112
@@ -1418,16 +1414,16 @@ state 99
     TEXT      shift, and go to state 115
     BINARY    shift, and go to state 116
 
-    sql_column_def_type  go to state 117
+    sql_column_type  go to state 117
 
 
 state 100
 
-    3 sql_command: CREATE TABLE IDENTIFIER '(' sql_column_definition_list . ')'
+    4 sql_command: CREATE TABLE IDENTIFIER '(' sql_column_definition_list . ')'
    19 sql_column_definition_list: sql_column_definition_list . ',' sql_column_definition
 
-    ')'  shift, and go to state 118
-    ','  shift, and go to state 119
+    ','  shift, and go to state 118
+    ')'  shift, and go to state 119
 
 
 state 101
@@ -1439,317 +1435,284 @@ state 101
 
 state 102
 
-   39 sql_where_clause: WHERE sql_expression .
+   36 sql_where_clause: WHERE sql_expression .
 
-    $default  reduce using rule 39 (sql_where_clause)
+    $default  reduce using rule 36 (sql_where_clause)
 
 
 state 103
 
-   32 sql_column_name_list: IDENTIFIER .
+   29 sql_column_name_list: IDENTIFIER .
 
-    $default  reduce using rule 32 (sql_column_name_list)
+    $default  reduce using rule 29 (sql_column_name_list)
 
 
 state 104
 
-   31 sql_insert_column_name_list_opt: '(' sql_column_name_list . ')'
-   33 sql_column_name_list: sql_column_name_list . ',' IDENTIFIER
+   28 sql_insert_column_name_list_opt: '(' sql_column_name_list . ')'
+   30 sql_column_name_list: sql_column_name_list . ',' IDENTIFIER
 
-    ')'  shift, and go to state 120
-    ','  shift, and go to state 121
+    ','  shift, and go to state 120
+    ')'  shift, and go to state 121
 
 
 state 105
 
-    4 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES . '(' sql_expression_list ')'
+    5 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES . '(' sql_expression_list ')'
 
     '('  shift, and go to state 122
 
 
 state 106
 
-   36 sql_column_pair: IDENTIFIER '=' . sql_expression
+   33 sql_column_assign: IDENTIFIER '=' . sql_expression
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
     sql_expression             go to state 123
-    sql_or_expression          go to state 30
-    sql_and_expression         go to state 31
-    sql_relational_expression  go to state 32
-    sql_add_expression         go to state 33
-    sql_mult_expression        go to state 34
-    sql_unary_expression       go to state 35
-    sql_primary_expression     go to state 36
-    sql_literal                go to state 37
-    sql_identifier             go to state 38
+    sql_or_expression          go to state 32
+    sql_and_expression         go to state 33
+    sql_relational_expression  go to state 34
+    sql_add_expression         go to state 35
+    sql_mult_expression        go to state 36
+    sql_unary_expression       go to state 37
+    sql_primary_expression     go to state 38
+    sql_literal                go to state 39
+    sql_identifier             go to state 40
 
 
 state 107
 
-   35 sql_column_pair_list: sql_column_pair_list ',' . sql_column_pair
+   32 sql_column_assign_list: sql_column_assign_list ',' . sql_column_assign
 
     IDENTIFIER  shift, and go to state 76
 
-    sql_column_pair  go to state 124
+    sql_column_assign  go to state 124
 
 
 state 108
 
-    5 sql_command: UPDATE IDENTIFIER SET sql_column_pair_list sql_where_clause_opt .
+    6 sql_command: UPDATE IDENTIFIER SET sql_column_assign_list sql_where_clause_opt .
 
-    $default  reduce using rule 5 (sql_command)
+    $default  reduce using rule 6 (sql_command)
 
 
 state 109
 
-   17 sql_select_statement: FROM IDENTIFIER sql_where_clause_opt .
+   10 sql_command: SELECT sql_select_expression_list_or_star FROM IDENTIFIER sql_where_clause_opt .
 
-    $default  reduce using rule 17 (sql_select_statement)
+    $default  reduce using rule 10 (sql_command)
 
 
 state 110
 
-   55 sql_relational_expression: sql_relational_expression IS NOT NULL_ .
+   52 sql_relational_expression: sql_relational_expression IS NOT NULL_ .
 
-    $default  reduce using rule 55 (sql_relational_expression)
+    $default  reduce using rule 52 (sql_relational_expression)
 
 
 state 111
 
-   21 sql_column_def_type: BOOLEAN_ .
+   21 sql_column_type: BOOLEAN_ .
 
-    $default  reduce using rule 21 (sql_column_def_type)
+    $default  reduce using rule 21 (sql_column_type)
 
 
 state 112
 
-   22 sql_column_def_type: INTEGER .
+   22 sql_column_type: INTEGER .
 
-    $default  reduce using rule 22 (sql_column_def_type)
+    $default  reduce using rule 22 (sql_column_type)
 
 
 state 113
 
-   23 sql_column_def_type: DECIMAL .
+   23 sql_column_type: DECIMAL .
 
-    $default  reduce using rule 23 (sql_column_def_type)
+    $default  reduce using rule 23 (sql_column_type)
 
 
 state 114
 
-   24 sql_column_def_type: DATETIME .
+   24 sql_column_type: DATETIME .
 
-    $default  reduce using rule 24 (sql_column_def_type)
+    $default  reduce using rule 24 (sql_column_type)
 
 
 state 115
 
-   25 sql_column_def_type: TEXT .
+   25 sql_column_type: TEXT .
 
-    $default  reduce using rule 25 (sql_column_def_type)
+    $default  reduce using rule 25 (sql_column_type)
 
 
 state 116
 
-   26 sql_column_def_type: BINARY .
+   26 sql_column_type: BINARY .
 
-    $default  reduce using rule 26 (sql_column_def_type)
+    $default  reduce using rule 26 (sql_column_type)
 
 
 state 117
 
-   20 sql_column_definition: IDENTIFIER sql_column_def_type . sql_column_def_null_opt
+   20 sql_column_definition: IDENTIFIER sql_column_type .
 
-    NOT    shift, and go to state 125
-    NULL_  shift, and go to state 126
-
-    $default  reduce using rule 27 (sql_column_def_null_opt)
-
-    sql_column_def_null_opt  go to state 127
+    $default  reduce using rule 20 (sql_column_definition)
 
 
 state 118
-
-    3 sql_command: CREATE TABLE IDENTIFIER '(' sql_column_definition_list ')' .
-
-    $default  reduce using rule 3 (sql_command)
-
-
-state 119
 
    19 sql_column_definition_list: sql_column_definition_list ',' . sql_column_definition
 
     IDENTIFIER  shift, and go to state 99
 
-    sql_column_definition  go to state 128
+    sql_column_definition  go to state 125
+
+
+state 119
+
+    4 sql_command: CREATE TABLE IDENTIFIER '(' sql_column_definition_list ')' .
+
+    $default  reduce using rule 4 (sql_command)
 
 
 state 120
 
-   31 sql_insert_column_name_list_opt: '(' sql_column_name_list ')' .
+   30 sql_column_name_list: sql_column_name_list ',' . IDENTIFIER
 
-    $default  reduce using rule 31 (sql_insert_column_name_list_opt)
+    IDENTIFIER  shift, and go to state 126
 
 
 state 121
 
-   33 sql_column_name_list: sql_column_name_list ',' . IDENTIFIER
+   28 sql_insert_column_name_list_opt: '(' sql_column_name_list ')' .
 
-    IDENTIFIER  shift, and go to state 129
+    $default  reduce using rule 28 (sql_insert_column_name_list_opt)
 
 
 state 122
 
-    4 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' . sql_expression_list ')'
+    5 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' . sql_expression_list ')'
 
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
 
-    sql_expression_list        go to state 130
-    sql_expression             go to state 131
-    sql_or_expression          go to state 30
-    sql_and_expression         go to state 31
-    sql_relational_expression  go to state 32
-    sql_add_expression         go to state 33
-    sql_mult_expression        go to state 34
-    sql_unary_expression       go to state 35
-    sql_primary_expression     go to state 36
-    sql_literal                go to state 37
-    sql_identifier             go to state 38
+    sql_expression_list        go to state 127
+    sql_expression             go to state 128
+    sql_or_expression          go to state 32
+    sql_and_expression         go to state 33
+    sql_relational_expression  go to state 34
+    sql_add_expression         go to state 35
+    sql_mult_expression        go to state 36
+    sql_unary_expression       go to state 37
+    sql_primary_expression     go to state 38
+    sql_literal                go to state 39
+    sql_identifier             go to state 40
 
 
 state 123
 
-   36 sql_column_pair: IDENTIFIER '=' sql_expression .
+   33 sql_column_assign: IDENTIFIER '=' sql_expression .
 
-    $default  reduce using rule 36 (sql_column_pair)
+    $default  reduce using rule 33 (sql_column_assign)
 
 
 state 124
 
-   35 sql_column_pair_list: sql_column_pair_list ',' sql_column_pair .
+   32 sql_column_assign_list: sql_column_assign_list ',' sql_column_assign .
 
-    $default  reduce using rule 35 (sql_column_pair_list)
+    $default  reduce using rule 32 (sql_column_assign_list)
 
 
 state 125
-
-   29 sql_column_def_null_opt: NOT . NULL_
-
-    NULL_  shift, and go to state 132
-
-
-state 126
-
-   28 sql_column_def_null_opt: NULL_ .
-
-    $default  reduce using rule 28 (sql_column_def_null_opt)
-
-
-state 127
-
-   20 sql_column_definition: IDENTIFIER sql_column_def_type sql_column_def_null_opt .
-
-    $default  reduce using rule 20 (sql_column_definition)
-
-
-state 128
 
    19 sql_column_definition_list: sql_column_definition_list ',' sql_column_definition .
 
     $default  reduce using rule 19 (sql_column_definition_list)
 
 
+state 126
+
+   30 sql_column_name_list: sql_column_name_list ',' IDENTIFIER .
+
+    $default  reduce using rule 30 (sql_column_name_list)
+
+
+state 127
+
+    5 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list . ')'
+   38 sql_expression_list: sql_expression_list . ',' sql_expression
+
+    ','  shift, and go to state 129
+    ')'  shift, and go to state 130
+
+
+state 128
+
+   37 sql_expression_list: sql_expression .
+
+    $default  reduce using rule 37 (sql_expression_list)
+
+
 state 129
 
-   33 sql_column_name_list: sql_column_name_list ',' IDENTIFIER .
+   38 sql_expression_list: sql_expression_list ',' . sql_expression
 
-    $default  reduce using rule 33 (sql_column_name_list)
+    NOT               shift, and go to state 15
+    NULL_             shift, and go to state 16
+    IDENTIFIER        shift, and go to state 17
+    BOOLEAN_LITERAL   shift, and go to state 18
+    INTEGER_LITERAL   shift, and go to state 19
+    DECIMAL_LITERAL   shift, and go to state 20
+    DATETIME_LITERAL  shift, and go to state 21
+    TEXT_LITERAL      shift, and go to state 22
+    BINARY_LITERAL    shift, and go to state 23
+    '('               shift, and go to state 24
+    '-'               shift, and go to state 25
+    '+'               shift, and go to state 26
+
+    sql_expression             go to state 131
+    sql_or_expression          go to state 32
+    sql_and_expression         go to state 33
+    sql_relational_expression  go to state 34
+    sql_add_expression         go to state 35
+    sql_mult_expression        go to state 36
+    sql_unary_expression       go to state 37
+    sql_primary_expression     go to state 38
+    sql_literal                go to state 39
+    sql_identifier             go to state 40
 
 
 state 130
 
-    4 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list . ')'
-   41 sql_expression_list: sql_expression_list . ',' sql_expression
+    5 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')' .
 
-    ')'  shift, and go to state 133
-    ','  shift, and go to state 134
+    $default  reduce using rule 5 (sql_command)
 
 
 state 131
 
-   40 sql_expression_list: sql_expression .
+   38 sql_expression_list: sql_expression_list ',' sql_expression .
 
-    $default  reduce using rule 40 (sql_expression_list)
-
-
-state 132
-
-   29 sql_column_def_null_opt: NOT NULL_ .
-
-    $default  reduce using rule 29 (sql_column_def_null_opt)
-
-
-state 133
-
-    4 sql_command: INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')' .
-
-    $default  reduce using rule 4 (sql_command)
-
-
-state 134
-
-   41 sql_expression_list: sql_expression_list ',' . sql_expression
-
-    NOT               shift, and go to state 14
-    NULL_             shift, and go to state 15
-    IDENTIFIER        shift, and go to state 16
-    BOOLEAN_LITERAL   shift, and go to state 17
-    INTEGER_LITERAL   shift, and go to state 18
-    DECIMAL_LITERAL   shift, and go to state 19
-    DATETIME_LITERAL  shift, and go to state 20
-    TEXT_LITERAL      shift, and go to state 21
-    BINARY_LITERAL    shift, and go to state 22
-    '+'               shift, and go to state 23
-    '-'               shift, and go to state 24
-    '('               shift, and go to state 26
-
-    sql_expression             go to state 135
-    sql_or_expression          go to state 30
-    sql_and_expression         go to state 31
-    sql_relational_expression  go to state 32
-    sql_add_expression         go to state 33
-    sql_mult_expression        go to state 34
-    sql_unary_expression       go to state 35
-    sql_primary_expression     go to state 36
-    sql_literal                go to state 37
-    sql_identifier             go to state 38
-
-
-state 135
-
-   41 sql_expression_list: sql_expression_list ',' sql_expression .
-
-    $default  reduce using rule 41 (sql_expression_list)
+    $default  reduce using rule 38 (sql_expression_list)

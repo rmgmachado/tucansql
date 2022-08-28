@@ -45,10 +45,10 @@ namespace tucan {
 	struct column_t
 	{
 		name_t name;
-		opcode_t type;
+		type_t type;
 		count_t width;
 
-		column_t(const name_t& n = "", opcode_t t = opcode_t::boolean)
+		column_t(const name_t& n = "", type_t t = type_t::boolean)
 			: name(n)
 			, type(t)
 			, width(n.length())
@@ -105,7 +105,7 @@ namespace tucan {
 			return get_column(find_column(name));
 		}
 
-		status_t add_column(const name_t& name, opcode_t type) noexcept
+		status_t add_column(const name_t& name, type_t type) noexcept
 		{
 			if (!validate(name, "[a-zA-Z][a-zA-Z0-9_]*")) return status_t::invalid_name;
 			if (find_column(name) != memdb::npos) return status_t::duplicate;
@@ -183,12 +183,12 @@ namespace tucan {
 
 		status_t write_column_integer(rowid_t rowid, colid_t colid, const value_t& value) noexcept
 		{
-			if (value.type() == opcode_t::integer)
+			if (value.type() == type_t::integer)
 			{
 				rows_[rowid][colid] = value;
 				return status_t::ok;
 			}
-			if (value.type() == opcode_t::decimal)
+			if (value.type() == type_t::decimal)
 			{
 				rows_[rowid][colid] = value_t(get_value<integer_t>(value));
 				return status_t::ok;
@@ -198,12 +198,12 @@ namespace tucan {
 
 		status_t write_column_decimal(rowid_t rowid, colid_t colid, const value_t& value) noexcept
 		{
-			if (value.type() == opcode_t::decimal)
+			if (value.type() == type_t::decimal)
 			{
 				rows_[rowid][colid] = value;
 				return status_t::ok;
 			}
-			if (value.type() == opcode_t::integer)
+			if (value.type() == type_t::integer)
 			{
 				rows_[rowid][colid] = value_t(get_value<decimal_t>(value));
 				return status_t::ok;
@@ -216,9 +216,9 @@ namespace tucan {
 			if (rowid >= row_count() || colid >= column_count()) return status_t::not_found;
 			if (!value.is_null())
 			{
-				opcode_t type = get_column(colid).type;
-				if (type == opcode_t::integer) return write_column_integer(rowid, colid, value);
-				if (type == opcode_t::decimal) return write_column_decimal(rowid, colid, value);
+				type_t type = get_column(colid).type;
+				if (type == type_t::integer) return write_column_integer(rowid, colid, value);
+				if (type == type_t::decimal) return write_column_decimal(rowid, colid, value);
 				if (type != value.type())  return status_t::invalid_type;
 			}
 			rows_[rowid][colid] = value;
@@ -269,7 +269,7 @@ namespace tucan {
 			return record_.column_count();
 		}
 
-		opcode_t get_column_type(colid_t colid) const noexcept
+		type_t get_column_type(colid_t colid) const noexcept
 		{
 			return record_.get_column(colid).type;
 		}
@@ -299,7 +299,7 @@ namespace tucan {
 			return record_.get_column(colid);
 		}
 
-		status_t add_column(const name_t& name, opcode_t type) noexcept
+		status_t add_column(const name_t& name, type_t type) noexcept
 		{
 			return record_.add_column(name, type);
 		}
@@ -429,7 +429,7 @@ namespace tucan {
 			return record_.row_count();
 		}
 
-		status_t add_column(const name_t& name, opcode_t type) noexcept
+		status_t add_column(const name_t& name, type_t type) noexcept
 		{
 			return record_.add_column(name, type);
 		}

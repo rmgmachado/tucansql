@@ -74,6 +74,11 @@ namespace tucan {
          return sql::ok;
       }
 
+      count_t row_count() const noexcept
+      {
+         return 0;
+      }
+
       count_t column_count() const noexcept
       {
          return 0;

@@ -33,15 +33,17 @@ TEST_CASE("scanner_t tests", "[scanner]")
 {
    // if you change the text, you need to fix the line and cols of tests
    std::string stmt = "SELECT *, (field1 + field2) AS \"field1 + field2\" FROM table \nWHERE name <> 'Reg''lar''ization' or field1 = 123.0 and (field2 <= 2022-08-26T16:56 or field2 >=2022-08-26T16:56:33)";
-   scanner_t sc(stmt);
+   scanner_t sc;
    token_t tok;
    int id;
+
+   REQUIRE(sc.run(stmt) == true);
 
    // select
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "SELECT");
+   REQUIRE(tok.text() == "SELECT");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 1);
    
@@ -49,7 +51,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == '*');
    REQUIRE(tok.id() == '*');
-   REQUIRE(tok.token() == "*");
+   REQUIRE(tok.text() == "*");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 8);
 
@@ -57,7 +59,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == ',');
    REQUIRE(tok.id() == ',');
-   REQUIRE(tok.token() == ",");
+   REQUIRE(tok.text() == ",");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 9);
 
@@ -65,7 +67,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == '(');
    REQUIRE(tok.id() == '(');
-   REQUIRE(tok.token() == "(");
+   REQUIRE(tok.text() == "(");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 11);
 
@@ -73,7 +75,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "field1");
+   REQUIRE(tok.text() == "field1");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 12);
 
@@ -81,7 +83,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == '+');
    REQUIRE(tok.id() == '+');
-   REQUIRE(tok.token() == "+");
+   REQUIRE(tok.text() == "+");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 19);
 
@@ -89,7 +91,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "field2");
+   REQUIRE(tok.text() == "field2");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 21);
 
@@ -97,7 +99,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == ')');
    REQUIRE(tok.id() == ')');
-   REQUIRE(tok.token() == ")");
+   REQUIRE(tok.text() == ")");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 27);
 
@@ -105,7 +107,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "AS");
+   REQUIRE(tok.text() == "AS");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 29);
 
@@ -113,7 +115,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::name);
    REQUIRE(tok.id() == token::name);
-   REQUIRE(tok.token() == "field1 + field2");
+   REQUIRE(tok.text() == "field1 + field2");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 32);
 
@@ -121,7 +123,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "FROM");
+   REQUIRE(tok.text() == "FROM");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 50);
 
@@ -129,7 +131,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "table");
+   REQUIRE(tok.text() == "table");
    REQUIRE(tok.line() == 1);
    REQUIRE(tok.column() == 55);
 
@@ -137,7 +139,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "WHERE");
+   REQUIRE(tok.text() == "WHERE");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 1);
 
@@ -145,7 +147,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "name");
+   REQUIRE(tok.text() == "name");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 7);
 
@@ -153,7 +155,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::ne);
    REQUIRE(tok.id() == token::ne);
-   REQUIRE(tok.token() == "<>");
+   REQUIRE(tok.text() == "<>");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 12);
 
@@ -161,7 +163,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::text);
    REQUIRE(tok.id() == token::text);
-   REQUIRE(tok.token() == "Reg'lar'ization");
+   REQUIRE(tok.text() == "Reg'lar'ization");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 15);
 
@@ -169,7 +171,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "or");
+   REQUIRE(tok.text() == "or");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 35);
 
@@ -177,7 +179,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "field1");
+   REQUIRE(tok.text() == "field1");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 38);
 
@@ -185,7 +187,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == '=');
    REQUIRE(tok.id() == '=');
-   REQUIRE(tok.token() == "=");
+   REQUIRE(tok.text() == "=");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 45);
 
@@ -193,7 +195,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::decimal);
    REQUIRE(tok.id() == token::decimal);
-   REQUIRE(tok.token() == "123.0");
+   REQUIRE(tok.text() == "123.0");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 47);
 
@@ -201,7 +203,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "and");
+   REQUIRE(tok.text() == "and");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 53);
 
@@ -209,7 +211,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == '(');
    REQUIRE(tok.id() == '(');
-   REQUIRE(tok.token() == "(");
+   REQUIRE(tok.text() == "(");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 57);
 
@@ -217,7 +219,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "field2");
+   REQUIRE(tok.text() == "field2");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 58);
 
@@ -225,7 +227,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::le);
    REQUIRE(tok.id() == token::le);
-   REQUIRE(tok.token() == "<=");
+   REQUIRE(tok.text() == "<=");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 65);
 
@@ -233,7 +235,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::datetime);
    REQUIRE(tok.id() == token::datetime);
-   REQUIRE(tok.token() == "2022-08-26T16:56");
+   REQUIRE(tok.text() == "2022-08-26T16:56");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 68);
 
@@ -241,7 +243,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "or");
+   REQUIRE(tok.text() == "or");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 85);
 
@@ -249,7 +251,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::identifier);
    REQUIRE(tok.id() == token::identifier);
-   REQUIRE(tok.token() == "field2");
+   REQUIRE(tok.text() == "field2");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 88);
 
@@ -257,7 +259,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::ge);
    REQUIRE(tok.id() == token::ge);
-   REQUIRE(tok.token() == ">=");
+   REQUIRE(tok.text() == ">=");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 95);
 
@@ -265,7 +267,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == token::datetime);
    REQUIRE(tok.id() == token::datetime);
-   REQUIRE(tok.token() == "2022-08-26T16:56:33");
+   REQUIRE(tok.text() == "2022-08-26T16:56:33");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 97);
 
@@ -273,7 +275,7 @@ TEST_CASE("scanner_t tests", "[scanner]")
    id = sc.next(tok);
    REQUIRE(id == ')');
    REQUIRE(tok.id() == ')');
-   REQUIRE(tok.token() == ")");
+   REQUIRE(tok.text() == ")");
    REQUIRE(tok.line() == 2);
    REQUIRE(tok.column() == 116);
 

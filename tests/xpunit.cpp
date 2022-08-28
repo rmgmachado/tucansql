@@ -26,44 +26,16 @@
 \*****************************************************************************/
 #include "xpunit.h"
 
-class test_t
+TEST_CASE("Test returning pointer to vector member", "[pointer]")
 {
-   inline static std::vector<int> test_;
-
-public:
-   test_t() = delete;
-   ~test_t() = default;
-
-   test_t(int val) noexcept
-   {
-      test_.push_back(val);
-   }
-
-   size_t count() const noexcept
-   {
-      return test_.size();
-   }
-
-   int get(size_t index)
-   {
-      if (index < count())
-      {
-         return test_[index];
-      }
-      return 0;
-   }
-};
-
-TEST_CASE("Test static vector", "static")
-{
-   test_t val1(1);
-   REQUIRE(val1.count() == 1 && val1.get(0) == 1);
-   SECTION("Enter new context")
-   {
-      test_t val2(2);
-      REQUIRE(val2.count() == 2 && val2.get(0) == 1);
-   }
-   REQUIRE(val1.count() == 2 && val1.get(0) == 1 && val1.get(1) == 2);
+   std::vector<int> v{ 1, 2 ,3 };
+   auto it = v.begin();
+   ++it;
+   size_t idx = std::distance(v.begin(), it);
+   int* ptr = &v[idx];
+   REQUIRE(*ptr == 2);
+   *ptr = 4;
+   REQUIRE(v[idx] = 4);
 }
 
 XPUNIT_MAIN("Test xpunit.h");

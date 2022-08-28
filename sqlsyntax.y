@@ -38,15 +38,11 @@
 %define api.pure
 %parse-param {void* handle}
 %lex-param {void* handle}
-%start sql_commands
+%start tucansql
 %verbose 
 
 %code top {
-
-#include "value.h"
-#include "scanner.h"
-#include "ptree.h"
-
+#include "sqlparser.h"
 using namespace tucan;
 }
 
@@ -58,6 +54,7 @@ using namespace tucan;
 }
 
 %code {
+parser_t* get_parser(void* handle);
 int sql_lex(YYSTYPE *lvalp, void* handle);
 void sql_error(void* handle, const char* s);
 }
@@ -66,7 +63,7 @@ void sql_error(void* handle, const char* s);
 *	Reserved words
 \*****************************************************************************/
 %token	<ytoken>	BOOLEAN_ INTEGER DECIMAL DATETIME TEXT BINARY  
-%token	<ytoken>	CREATE DROP DELETE TABLE INSERT INTO VALUES
+%token	<ytoken>	CREATE DROP DELETE_ TABLE INSERT INTO VALUES
 %token	<ytoken>	UPDATE SET WHERE SELECT FROM
 %token	<ytoken>	NOT NULL_ OR AND AS IS
 
@@ -88,19 +85,24 @@ void sql_error(void* handle, const char* s);
 %token	<ytoken>	NE LE GE 
 
 /*****************************************************************************\
+*	token types
+\*****************************************************************************/
+%type		<ytoken>	'.' ',' ';' '(' ')' '-' '+' '*' '/' '=' '<' '>'
+
+/*****************************************************************************\
 *	Production types
 \*****************************************************************************/
 %type		<ytree>	sql_commands sql_command 
 %type		<ytree>	sql_column_definition_list sql_column_definition 
-%type		<ytree>	sql_column_def_type sql_column_def_null_opt
-%type		<ytree>	sql_column_pair_list sql_column_pair 
-%type		<ytree>	sql_where_clause_opt sql_where_clause sql_select_statement
+%type		<ytree>	 sql_column_assign_list sql_column_assign
+%type		<ytree>	sql_where_clause_opt sql_where_clause
 %type		<ytree>	sql_column_name_list sql_expression_list sql_expression 
 %type		<ytree>	sql_or_expression sql_and_expression sql_relational_expression
 %type		<ytree>	sql_add_expression sql_mult_expression sql_unary_expression 
 %type		<ytree>	sql_primary_expression sql_literal sql_identifier
-%type		<ytree>	sql_select_expression_list sql_select_expression sql_select_as_opt
-%type		<ytree>	sql_insert_column_name_list_opt
+%type		<ytree>	sql_select_expression_list sql_select_expression
+%type		<ytree>	sql_insert_column_name_list_opt sql_column_type
+%type		<ytree>	sql_select_expression_list_or_star
 
 /*****************************************************************************\
 *	Precedence rules
@@ -115,162 +117,392 @@ void sql_error(void* handle, const char* s);
 \*****************************************************************************/
 %%
 
+tucansql
+	: sql_commands
+	  {
+			get_parser(handle)->set_tree($1);
+	  }
+	;
+
 sql_commands
 	: sql_command
+	  {
+			$$ = $1;
+	  }
 	| sql_commands ';' sql_command
+	  {
+			$3->right($1);
+			$$ = $3;
+	  }
 	;
 	
 sql_command
 	: CREATE TABLE IDENTIFIER '(' sql_column_definition_list ')'
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::create_table, $3, make_text_value($3->text()), $5);
+	  }
 	| INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
-	| UPDATE IDENTIFIER SET sql_column_pair_list sql_where_clause_opt
-	| SELECT sql_select_expression_list sql_select_statement
+	  {
+			ptree_t* left = make_ptree(get_parser(handle), ptree::insert_values, $5, value_t(), $4, $7);
+			$$ = make_ptree(get_parser(handle), ptree::insert, $3, make_text_value($3->text()), left);
+	  }
+	| UPDATE IDENTIFIER SET sql_column_assign_list sql_where_clause_opt
+	  {
+			ptree_t* left = make_ptree(get_parser(handle), ptree::update_set, $3, value_t(), $5, $4);
+			$$ = make_ptree(get_parser(handle), ptree::update, $2, make_text_value($2->text()), left);
+	  }
 	| DROP TABLE IDENTIFIER
-	| DELETE FROM IDENTIFIER sql_where_clause_opt
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::drop_table, $3, make_text_value($3->text()));
+	  }
+	| DELETE_ FROM IDENTIFIER sql_where_clause_opt
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::delete_row, $3, make_text_value($3->text()), $4);
+	  }
+	| SELECT sql_select_expression_list
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::select, $1, value_t(), $2);
+	  }
+	| SELECT sql_select_expression_list_or_star FROM IDENTIFIER sql_where_clause_opt
+	  {
+			ptree_t* where = make_ptree(get_parser(handle), ptree::select_where, nullptr, value_t(), $5, $2);
+			ptree_t* from = make_ptree(get_parser(handle), ptree::select_from, $4, value_t(), nullptr, where);
+			$$ = make_ptree(get_parser(handle), ptree::select, $1, value_t(), from);
+	  }
 	;
 	
+sql_select_expression_list_or_star
+	: '*'
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::field_all, $1, value_t());
+	  }
+	| sql_select_expression_list
+	  {
+			$$ = $1;
+	  }
+	;
+
 sql_select_expression_list
 	: sql_select_expression
+	  {
+			$$ = $1;
+	  }
 	| sql_select_expression_list ',' sql_select_expression
+	  {
+			$3->right($1);
+			$$ = $3;
+	  }
 	;
 
 sql_select_expression
-	: '*'
-	| sql_expression sql_select_as_opt
+	: sql_expression
+	  {
+			$1->token(token_t());
+			$$ = $1;
+	  }
+	| sql_expression AS IDENTIFIER
+	  {
+			$1->token(*$3);
+			$$ = $1;
+	  }
+	| sql_expression AS NAME
+	  {
+			$1->token(*$3);
+			$$ = $1;
+	  }
 	;
 	
-sql_select_as_opt
-	: 
-	| AS IDENTIFIER
-	| AS NAME
-	;
-	
-sql_select_statement
-   : 
-   | FROM IDENTIFIER sql_where_clause_opt 
-   ;
-
 sql_column_definition_list
 	: sql_column_definition
+	  {
+			$$ = $1;
+	  }
 	| sql_column_definition_list ',' sql_column_definition
+	  {
+			$3->right($1);
+			$$ = $3;
+	  }
 	;
 	
 sql_column_definition
-	:  IDENTIFIER sql_column_def_type sql_column_def_null_opt
+	: IDENTIFIER sql_column_type
+	  {
+			$2->token(*$1);
+			$$ = $2;
+	  }
 	;
 	
-sql_column_def_type
+sql_column_type
 	: BOOLEAN_
+	  {
+			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(false));
+	  }
 	| INTEGER
+	  {
+			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(0ll));
+	  }
 	| DECIMAL
+	  {
+			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(decimal_t()));
+	  }
 	| DATETIME
+	  {
+			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(datetime_t()));
+	  }
 	| TEXT
+	  {
+			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(text_t()));
+	  }
 	| BINARY
+	  {
+			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(binary_t()));
+	  }
 	;
-	
-sql_column_def_null_opt
-	:
-	| NULL_
-	| NOT NULL_
-	;
-	
+
 sql_insert_column_name_list_opt
 	:
+	  {
+			$$ = nullptr;
+	  }
 	| '(' sql_column_name_list ')'
+	  {
+			$$ = $2;
+	  }
    ;
 
 sql_column_name_list
 	: IDENTIFIER
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::field_name, $1, value_t());
+	  }
 	| sql_column_name_list ',' IDENTIFIER
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::field_name, $3, value_t(), nullptr, $1);
+	  }
 	;
 	
-sql_column_pair_list 
-	: sql_column_pair
-	| sql_column_pair_list ',' sql_column_pair
+sql_column_assign_list 
+	: sql_column_assign
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::assign_list, token_t(), value_t(), $1)
+	  }
+	| sql_column_assign_list ',' sql_column_assign
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::assign_list, token_t(), value_t(), $3, $1);
+	  }
 	;
 	
-sql_column_pair
+sql_column_assign
 	: IDENTIFIER '=' sql_expression
+	  {
+			ptree_t* right = make_ptree(get_parser(handle), ptree::field_name, $1, value_t());
+			$$ = make_ptree(get_parser(handle), ptree::assign, $2, value_t(), $3, right);
+	  }
 	;
 
 sql_where_clause_opt
 	:
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::where_true, nullptr, value_t(true));
+	  }
 	| sql_where_clause
+	  {
+			$$ = $1;
+	  }
 	;
 	
 sql_where_clause
 	: WHERE sql_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::where, $1, value_t(false), $2);
+	  }
 	;
 	
 sql_expression_list
 	: sql_expression
+	  {
+			$$ = $1;
+	  }	  
 	| sql_expression_list ',' sql_expression
+	  {
+			$3->right($1);
+			$$ = $3;
+	  }
 	;
 	
 sql_expression
 	: sql_or_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::expr, nullptr, value_t(), $1);
+	  }
 	;
 	
 sql_or_expression
 	: sql_and_expression
+	  {
+			$$ = $1;
+	  }
 	| sql_or_expression OR sql_and_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::logical_or, $2, value_t(false), $1, $3);
+	  }
 	;
 	
 sql_and_expression
 	: sql_relational_expression
+	  {
+			$$ = $1;
+	  }
 	| sql_relational_expression AND sql_relational_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::logical_and, $2, value_t(false), $1, $3);
+	  }
 	;
 	
 sql_relational_expression
 	: sql_add_expression
+	  {
+			$$ = $1;
+	  }
 	| sql_relational_expression '=' sql_add_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::equal, $2, value_t(false), $1, $3);
+	  }
 	| sql_relational_expression NE sql_add_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::not_equal, $2, value_t(false), $1, $3);
+	  }
 	| sql_relational_expression '<' sql_add_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::less, $2, value_t(false), $1, $3);
+	  }
 	| sql_relational_expression LE sql_add_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::less_equal, $2, value_t(false), $1, $3);
+	  }
 	| sql_relational_expression '>' sql_add_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::greater, $2, value_t(false), $1, $3);
+	  }
 	| sql_relational_expression GE sql_add_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::greater_equal, $2, value_t(false), $1, $3);
+	  }
 	| sql_relational_expression IS NULL_
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::is_null, $2, value_t(false), $1);
+	  }
 	| sql_relational_expression IS NOT NULL_
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::is_not_null, $2, value_t(false), $1);
+	  }
 	;
 
 sql_add_expression
 	: sql_mult_expression
+	  {
+			$$ = $1;
+	  }
 	| sql_add_expression '+' sql_mult_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::add, $2, value_t(decimal_t()), $1, $3);
+	  }
 	| sql_add_expression '-' sql_mult_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::subtract, $2, value_t(decimal_t()), $1, $3);
+	  }
 	;		
 	
 sql_mult_expression
 	: sql_unary_expression
+	  {
+			$$ = $1;
+	  }
 	| sql_mult_expression '*' sql_unary_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::multiply, $2, value_t(decimal_t()), $1, $3);
+	  }
 	| sql_mult_expression '/' sql_unary_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::divide, $2, value_t(decimal_t()), $1, $3);
+	  }
 	;
 	
 sql_unary_expression
 	: sql_primary_expression
+	  {
+			$$ = $1;
+	  }
 	| '+' sql_primary_expression %prec SQL_UMINUS
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::plus, $1, value_t(decimal_t()), $2);$2;
+	  }
 	| '-' sql_primary_expression %prec SQL_UMINUS
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::minus, $1, value_t(decimal_t()), $2);
+	  }
 	| NOT sql_primary_expression
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::negate, $1, value_t(decimal_t()), $2);
+	  }
 	;
 	
 sql_primary_expression
 	: sql_literal
+	  {
+			$$ = $1;
+	  }
 	| sql_identifier
+	  {
+			$$ = $1;
+	  }
 	| '(' sql_expression ')'
+	  {
+			$$ = $2;
+	  }
 	;
 	
 sql_literal
 	: BOOLEAN_LITERAL 
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::push_literal, $1, make_boolean_value($1->text()));
+	  }
 	| INTEGER_LITERAL 
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::push_literal, $1, make_integer_value($1->text()));
+	  }
 	| DECIMAL_LITERAL  
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::push_literal, $1, make_decimal_value($1->text()));
+	  }
 	| DATETIME_LITERAL 
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::push_literal, $1, make_datetime_value($1->text()));
+	  }
 	| TEXT_LITERAL 
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::push_literal, $1, make_text_value($1->text()));
+	  }
 	| BINARY_LITERAL  
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::push_literal, $1, make_binary_value($1->text()));
+	  }
 	| NULL_
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::push_literal, $1, value_t());
+	  }
 	;
 	
 sql_identifier
 	: IDENTIFIER
+	  {
+			$$ = make_ptree(get_parser(handle), ptree::push_field, $1, value_t());
+	  }
 	| IDENTIFIER '.' IDENTIFIER
+	  {
+			ptree_t* left = make_ptree(get_parser(handle), ptree::push_table, $1, value_t());
+			$$ = make_ptree(get_parser(handle), ptree::push_field, $3, value_t(), left);
+	  }
 	;
 	
 %%
@@ -278,20 +510,110 @@ sql_identifier
 *	Supporting parser code
 \*****************************************************************************/
 
-int sql_lex(YYSTYPE *lvalp, void* handle) 
+parser_t* get_parser(void* handle)
 {
-	return 0;
+   return (parser_t*)handle;
 }
 
 void sql_error(void* handle, const char* s) 
 {
+   parser_t* parser = get_parser(handle);
+   if (parser)
+   {
+      parser->set_error(parser::syntax_error, s);
+   }
 }
 
 void sql_set_error(void* handle, const char* s, int code)
 {
+   parser_t* parser = get_parser(handle);
+   if (parser)
+   {
+      parser->set_error(code, s);
+   }
 }
 
-int sql_parser(const char* stmt)
+int LookupReservedWord(token_t* token, int id)
 {
-	return yyparse ((void*)stmt);
+   struct reserved_t
+   {
+      const char* text;
+      int id;
+   };
+
+	static reserved_t reserved[]
+	{
+        {"AND"       , AND       }
+		, {"AS"        , AS        }
+		, {"BINARY"    , BINARY    }
+		, {"BOOLEAN"   , BOOLEAN_  }
+		, {"CREATE"    , CREATE    }
+		, {"DATETIME"  , DATETIME  }
+		, {"DECIMAL"   , DECIMAL   }
+		, {"DELETE"    , DELETE_   }
+		, {"DROP"      , DROP      }
+		, {"FROM"      , FROM      }
+		, {"INSERT"    , INSERT    }
+		, {"INTEGER"   , INTEGER   }
+		, {"INTO"      , INTO      }
+		, {"IS"        , IS        }
+		, {"NOT"       , NOT       }
+		, {"NULL"      , NULL_     }
+		, {"OR"        , OR        }
+		, {"SELECT"    , SELECT    }
+		, {"SET"       , SET       }
+		, {"TABLE"     , TABLE     }
+		, {"TEXT"      , TEXT      }
+		, {"UPDATE"    , UPDATE    }
+		, {"VALUES"    , VALUES    }
+		, {"WHERE"     , WHERE     }
+	};
+
+	for ( auto& item : reserved )
+	{
+		if (compare(item.text, token->text()))
+		{
+			return item.id;
+		}
+	}
+	return id;
+}
+
+int sql_lex(YYSTYPE *lvalp, void* handle) 
+{
+	if (handle)
+	{
+		token_t* ptr = get_parser(handle)->scanner().next();
+		if (ptr)
+		{
+			int id = ptr->id();
+			if (id == token::eof) return id;
+			switch (id)
+			{
+				case token::identifier: ptr->id(LookupReservedWord(ptr, IDENTIFIER); break;
+				case token::decimal: ptr->id(DECIMAL_LITERAL); break;
+				case token::datetime: ptr->id(DATETIME_LITERAL); break;
+				case token::text: ptr->id(TEXT_LITERAL); break;
+				case token::name: ptr->id(NAME); break;
+				case token::ne: ptr->id(NE); break;
+				case token::le: ptr->id(LE); break;
+				case token::ge: ptr->id(GE); break;
+				default:
+				{
+					std::string str("Unknown or invalid token: ");
+					str += ptr->text();
+					sql_set+error(handle, str.c_str(), parser::syntax_error);
+					break;
+				}
+			}
+			lvalp->ytoken = ptr;
+			return ptr->id();
+		}
+	}
+	return 0;
+}
+
+int sql_parser(void* pt)
+{
+	return yyparse(pt);
 }

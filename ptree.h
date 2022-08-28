@@ -33,9 +33,49 @@ namespace tucan {
 
    namespace ptree {
       enum opcode_t : int {
-         noop = 0 // no operation
+           noop = 0     // no operation
+         , push_field
+         , push_table
+         , push_literal
+         , minus        // eg -1
+         , plus         // eg +1
+         , negate       // eg NOT true
+         , multiply
+         , divide
+         , add
+         , subtract
+         , equal
+         , not_equal
+         , less
+         , less_equal
+         , greater
+         , greater_equal
+         , is_null
+         , is_not_null
+         , logical_or
+         , logical_and
+         , expr
+         , where
+         , where_true
+         , assign_list
+         , assign
+         , field_def
+         , field_name
+         , create_table
+         , insert
+         , insert_values
+         , update
+         , update_set
+         , drop_table
+         , delete_row
+         , select
+         , select_where
+         , select_from
+         , field_all
       };
    }
+
+   class parser_t;
 
    class ptree_t
    {
@@ -44,6 +84,7 @@ namespace tucan {
       value_t value_;
       ptree_t* left_;
       ptree_t* right_;
+      parser_t* parser_;
 
       // keep track of all "allocated" ptree_t objects
       inline static std::vector<ptree_t> ptree_;
@@ -55,16 +96,18 @@ namespace tucan {
          , value_()
          , left_(nullptr)
          , right_(nullptr)
+         , parser_(nullptr)
       {
          ptree_.push_back(*this);
       }
 
-      ptree_t(ptree::opcode_t opcode, const token_t& token, const value_t& value, ptree_t* left = nullptr, ptree_t* right = nullptr) noexcept
+      ptree_t(parser_t* parser, ptree::opcode_t opcode, const token_t& token, const value_t& value, ptree_t* left = nullptr, ptree_t* right = nullptr) noexcept
          : opcode_(opcode)
          , token_(token)
          , value_(value)
          , left_(left)
          , right_(right)
+         , parser_(parser)
       {
          ptree_.push_back(*this);
       }
@@ -103,6 +146,30 @@ namespace tucan {
       void value(const value_t& val) noexcept
       {
          value_ = val;
+      }
+
+      type_t type() const noexcept
+      {
+         return value().type();
+      }
+
+      parser_t* parser() noexcept
+      {
+         return parser_;
+      }
+
+      void type(type_t t)
+      {
+         switch (t)
+         {
+         case type_t::null: value_ = value_t(); break;
+         case type_t::integer: value_ = value_t(0ll); break;
+         case type_t::decimal: value_ = value_t(decimal_t()); break;
+         case type_t::datetime: value_ = value_t(datetime_t()); break;
+         case type_t::text: value_ = value_t(text_t()); break;
+         case type_t::binary: value_ = value_t(binary_t()); break;
+         default: value_ = value_t(); break;
+         }
       }
 
       ptree_t* left() noexcept
@@ -147,10 +214,20 @@ namespace tucan {
 
    // alwyas use make_ptree to create pointers to ptree_t object. 
    // avoid using ptree_t constructors directly
-   inline ptree_t* make_ptree(ptree::opcode_t opcode, const token_t& token, const value_t& value, ptree_t* left = nullptr, ptree_t* right = nullptr) noexcept
+   inline ptree_t* make_ptree(parser_t* parser, ptree::opcode_t opcode, const token_t& token, const value_t& value, ptree_t* left = nullptr, ptree_t* right = nullptr) noexcept
    {
-      ptree_t pt(opcode, token, value, left, right);
+      ptree_t pt(parser, opcode, token, value, left, right);
       return ptree_t::last();
    }
+
+   inline ptree_t* make_ptree(parser_t* parser, ptree::opcode_t opcode, const token_t* token, const value_t& value, ptree_t* left = nullptr, ptree_t* right = nullptr) noexcept
+   {
+      if (token)
+      {
+         return make_ptree(parser, opcode, *token, value, left, right);
+      }
+      return nullptr;
+   }
+
 
 } // namespace tucan

@@ -47,7 +47,7 @@
      BINARY = 263,
      CREATE = 264,
      DROP = 265,
-     DELETE = 266,
+     DELETE_ = 266,
      TABLE = 267,
      INSERT = 268,
      INTO = 269,

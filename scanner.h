@@ -75,12 +75,12 @@ namespace tucan {
          return id_;
       }
 
-      void id(token::id_t i)
+      void id(int i)
       {
          id_ = i;
       }
 
-      std::string token() const noexcept
+      std::string text() const noexcept
       {
          return token_;
       }
@@ -99,59 +99,75 @@ namespace tucan {
    class scanner_t
    {
       std::vector<token_t> tokens_;
-      std::vector<token_t>::iterator current_;
+      std::vector<token_t>::iterator ptr_;
       std::string text_;
       unsigned int line_;
       unsigned int column_;
       std::string::const_iterator pos_;
+      std::vector<token_t>::iterator current_;
 
 
    public:
       ~scanner_t() = default;
       scanner_t(const scanner_t&) = delete;
-      scanner_t(scanner_t&&) = delete;
+      scanner_t(scanner_t&&) = default;
       scanner_t& operator=(const scanner_t&) = delete;
-      scanner_t& operator=(scanner_t&&) = delete;
+      scanner_t& operator=(scanner_t&&) = default;
 
       scanner_t() noexcept
          : text_()
          , tokens_()
          , line_(1)
          , column_(1)
-      {
-         current_ = tokens_.begin();
-         pos_ = text_.cbegin();
-      }
+         , ptr_(tokens_.begin())
+         , pos_(text_.cbegin())
+         , current_(tokens_.end())
+      {}
 
       scanner_t(const std::string& text) noexcept
          : text_(text)
          , tokens_()
          , line_(1)
          , column_(1)
-      {
-         pos_ = text_.cbegin();
-         scan();
-         current_ = tokens_.begin();
-      }
+      {}
 
       int next(token_t& token) noexcept
       {
-         if (current_ != tokens_.end())
+         if (ptr_ != tokens_.end())
          {
-            token = *current_++;
+            current_ = ptr_;
+            token = *ptr_++;
             return token.id();
          }
          return token::id_t::eof;
       }
 
-      void rewind() noexcept
+      token_t* next() noexcept
       {
-         current_ = tokens_.begin();
+         current_ = ptr_;
+         size_t idx = std::distance(tokens_.begin(), ptr_);
+         ptr_++;
+         return &tokens_[idx];
       }
 
-   private:
-      void scan() noexcept
+      void rewind() noexcept
       {
+         current_ = ptr_ = tokens_.begin();
+      }
+
+      token_t& current() noexcept
+      {
+         return *current_;
+      }
+
+      bool run(const std::string& stmt) noexcept
+      {
+         text_ = stmt;
+         tokens_.clear();
+         current_ = ptr_ = tokens_.begin();
+         line_ = column_ = 1;
+         pos_ = text_.cbegin();
+         if (peek() == token::eof) return false;
          while (peek() != token::eof)
          {
             // the order of processing is important, please don't change
@@ -163,8 +179,11 @@ namespace tucan {
             if (is_decimal()) continue;
             scan_symbol();
          }
+         ptr_ = tokens_.begin();
+         return true;
       }
 
+   private:
       bool is_identifier() noexcept
       {
          if (std::isalpha(*pos_) || *pos_ == '_')
@@ -190,6 +209,7 @@ namespace tucan {
          {
             return add_token("((\\d{4})-(\\d{2})-(\\d{2})([ T](\\d{2})(:(\\d{2})(:(\\d{2})(\\.(\\d{1,6}))?)?)?)?)[\\s\\S]*", token::datetime);
          }
+         return false;
       }
 
       bool is_text() noexcept
@@ -216,7 +236,7 @@ namespace tucan {
          {
             std::string matched;
             unsigned int col = column_;
-            int id = quote == '"' ? token::name : token::text;
+            int id = int(quote == '"' ? token::name : token::text);
             if (match_quoted(quote, matched))
             {
                tokens_.push_back(token_t(matched, id, line_, col));

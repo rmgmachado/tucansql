@@ -78,22 +78,22 @@ TEST_CASE("table_t tests", "[memdb]")
    REQUIRE(tb.name() == "");
    tb.name("table1");
    REQUIRE(tb.name() == "table1");
-   REQUIRE(tb.add_column("name", opcode_t::text) == status_t::ok);
-   REQUIRE(tb.add_column("age", opcode_t::decimal) == status_t::ok);
+   REQUIRE(tb.add_column("name", type_t::text) == status_t::ok);
+   REQUIRE(tb.add_column("age", type_t::decimal) == status_t::ok);
    REQUIRE(tb.column_count() == 2);
    REQUIRE(tb.row_count() == 0);
-   REQUIRE(tb.add_column("1ad", opcode_t::decimal) == status_t::invalid_name);
-   REQUIRE(tb.add_column("name", opcode_t::datetime) == status_t::duplicate);
+   REQUIRE(tb.add_column("1ad", type_t::decimal) == status_t::invalid_name);
+   REQUIRE(tb.add_column("name", type_t::datetime) == status_t::duplicate);
 
    column_t& col = tb.get_cursor().get_column("name");
    REQUIRE(col.name == "name");
-   REQUIRE(col.type == opcode_t::text);
+   REQUIRE(col.type == type_t::text);
    col = tb.get_cursor().get_column("age");
    REQUIRE(col.name == "age");
-   REQUIRE(col.type == opcode_t::decimal);
+   REQUIRE(col.type == type_t::decimal);
    col = tb.get_cursor().get_column("1a");
    REQUIRE(col.name == "");
-   REQUIRE(col.type == opcode_t::boolean);
+   REQUIRE(col.type == type_t::boolean);
 }
 
 TEST_CASE("cursor_t tests", "[memdb]")
@@ -104,10 +104,10 @@ TEST_CASE("cursor_t tests", "[memdb]")
    REQUIRE(tb.get_cursor().column_count() == 0);
    REQUIRE(tb.get_cursor().row_count() == 0);
 
-   REQUIRE(tb.get_cursor().add_column("Name", opcode_t::text) == status_t::ok);
-   REQUIRE(tb.get_cursor().add_column("Age", opcode_t::decimal) == status_t::ok);
-   REQUIRE(tb.get_cursor().add_column("Male", opcode_t::boolean) == status_t::ok);
-   REQUIRE(tb.get_cursor().add_column("Code", opcode_t::binary) == status_t::ok);
+   REQUIRE(tb.get_cursor().add_column("Name", type_t::text) == status_t::ok);
+   REQUIRE(tb.get_cursor().add_column("Age", type_t::decimal) == status_t::ok);
+   REQUIRE(tb.get_cursor().add_column("Male", type_t::boolean) == status_t::ok);
+   REQUIRE(tb.get_cursor().add_column("Code", type_t::binary) == status_t::ok);
    REQUIRE(tb.get_cursor().column_count() == 4);
    REQUIRE(tb.get_cursor().row_count() == 0);
 

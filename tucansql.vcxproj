@@ -135,8 +135,10 @@
     <ClInclude Include="memdb.h" />
     <ClInclude Include="ptree.h" />
     <ClInclude Include="scanner.h" />
+    <ClInclude Include="sqlparser.h" />
     <ClInclude Include="system.h" />
     <ClInclude Include="tests\xpunit.h" />
+    <ClInclude Include="tucansql.h" />
     <ClInclude Include="utility.h" />
     <ClInclude Include="value.h" />
   </ItemGroup>
