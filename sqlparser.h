@@ -27,6 +27,7 @@
 #pragma once
 
 #include <functional>
+#include <stack>
 
 #include "value.h"
 #include "scanner.h"
@@ -42,6 +43,8 @@ namespace tucan {
 
       enum status_t : int { ok, syntax_error };
    }
+
+   using stack_t = std::stack<value_t>;
 
    class parser_t
    {
