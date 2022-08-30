@@ -598,13 +598,7 @@ int sql_lex(YYSTYPE *lvalp, void* handle)
 				case token::ne: ptr->id(NE); break;
 				case token::le: ptr->id(LE); break;
 				case token::ge: ptr->id(GE); break;
-				default:
-				{
-					std::string str("Unknown or invalid token: ");
-					str += ptr->text();
-					sql_set_error(handle, str.c_str(), parser::syntax_error);
-					break;
-				}
+				default: break;
 			}
 			lvalp->ytoken = ptr;
 			return ptr->id();

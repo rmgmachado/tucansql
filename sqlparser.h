@@ -91,6 +91,14 @@ namespace tucan {
       {
          return stack_.size();
       }
+
+      void clear() noexcept
+      {
+         while (!stack_.empty())
+         {
+            stack_.pop();
+         }
+      }
    };
 
    class parser_t
@@ -115,12 +123,12 @@ namespace tucan {
       parser_t& operator=(const parser_t&) = default;
       parser_t& operator=(parser_t&&) = default;
 
-      parser_t(database_t& db, const std::string& stmt) noexcept
-         : stmt_(stmt)
+      parser_t(database_t& db) noexcept
+         : stmt_()
          , error_(0)
          , errmsg_()
          , ptree_(nullptr)
-         , scan_(stmt)
+         , scan_()
          , db_(db)
          , table_()
          , nodes_()
@@ -129,12 +137,18 @@ namespace tucan {
          , rows_affected_(0)
       {}
 
-      bool run() noexcept
+      bool run(const text_t& stmt) noexcept
       {
-         error_ = 0;
-         errmsg_ = "No error detected";
+         stmt_ = stmt;
+         errmsg_ = "No errors detected";
+         ptree_ = nullptr;
+         table_ = "";
          nodes_.clear();
+         result_.clear();
+         stack_.clear();
+         rows_affected_ = 0;
          scan_.run(stmt_);
+         int error_ = 0;
          if (!sql_parser((void*)this))
          {
             return context_check();
@@ -157,12 +171,12 @@ namespace tucan {
          set_error(err, msg, scan_.current());
       }
 
-      inline scanner_t& scanner() noexcept
+      scanner_t& scanner() noexcept
       {
          return scan_;
       }
 
-      inline void set_tree(ptree_t* tree) noexcept
+      void set_tree(ptree_t* tree) noexcept
       {
          ptree_ = tree;
       }
@@ -224,6 +238,16 @@ namespace tucan {
       return parser->make(parser, opcode, tok, value, left, right);
    }
 
+   inline parser_t* tree_parser(ptree_t* tree) noexcept
+   {
+      return tree->parser();
+   }
+
+   inline stack_t& tree_stack(ptree_t* tree) noexcept
+   {
+      return tree->parser()->stack();
+   }
+
    namespace context {
 
       inline bool check_noop(ptree_t* tree) noexcept 
@@ -264,8 +288,8 @@ namespace tucan {
       inline bool check_field_def(ptree_t* tree) noexcept 
       { 
          // push field type then push field name
-         tree->parser()->stack().push(tree->value());
-         tree->parser()->stack().push(value_t(tree->token().text()));
+         tree_stack(tree).push(tree->value());
+         tree_stack(tree).push(value_t(tree->token().text()));
          return true; 
       }
 
@@ -280,15 +304,15 @@ namespace tucan {
       {
          using pair_t = std::pair<value_t, value_t>;
          std::vector<pair_t> names;
-         while (!tree->parser()->stack().empty())
+         while (!tree_stack(tree).empty())
          {
-            value_t fname = tree->parser()->stack().pop();
-            value_t ftype = tree->parser()->stack().pop();
+            value_t fname = tree_stack(tree).pop();
+            value_t ftype = tree_stack(tree).pop();
             for (auto& item : names)
             {
                if (compare(get_value<text_t>(fname), get_value<text_t>(item.first)))
                {
-                  tree->parser()->set_error(parser::duplicate, text_t("duplicate field " + get_value<text_t>(fname)).c_str());
+                  tree_parser(tree)->set_error(parser::duplicate, text_t("duplicate field " + get_value<text_t>(fname)).c_str());
                   return false;
                }
             }

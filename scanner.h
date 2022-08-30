@@ -106,7 +106,6 @@ namespace tucan {
       std::string::const_iterator pos_;
       std::vector<token_t>::iterator current_;
 
-
    public:
       ~scanner_t() = default;
       scanner_t(const scanner_t&) = delete;
@@ -124,12 +123,16 @@ namespace tucan {
          , current_(tokens_.end())
       {}
 
-      scanner_t(const std::string& text) noexcept
-         : text_(text)
-         , tokens_()
-         , line_(1)
-         , column_(1)
-      {}
+      void clear() noexcept
+      {
+         tokens_.clear();
+         ptr_ = tokens_.end();
+         text_ = "";
+         line_ = 1;
+         column_ = 1;
+         pos_ = text_.cend();
+         current_ = tokens_.end();
+      }
 
       int next(token_t& token) noexcept
       {
@@ -166,10 +169,9 @@ namespace tucan {
 
       bool run(const std::string& stmt) noexcept
       {
+         clear();
          text_ = stmt;
-         tokens_.clear();
          current_ = ptr_ = tokens_.begin();
-         line_ = column_ = 1;
          pos_ = text_.cbegin();
          if (peek() == token::eof) return false;
          while (peek() != token::eof)

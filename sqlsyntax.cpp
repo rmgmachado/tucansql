@@ -2378,7 +2378,7 @@ int sql_lex(YYSTYPE *lvalp, void* handle)
 				case token::ne: ptr->id(NE); break;
 				case token::le: ptr->id(LE); break;
 				case token::ge: ptr->id(GE); break;
-            default: break;
+				default: break;
 			}
 			lvalp->ytoken = ptr;
 			return ptr->id();

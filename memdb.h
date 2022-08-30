@@ -71,6 +71,12 @@ namespace tucan {
 		record_t& operator=(const record_t&) = default;
 		record_t& operator=(record_t&&) = default;
 
+		void clear() noexcept
+		{
+			columns_.clear();
+			rows_.clear();
+		}
+
 		count_t column_count() const noexcept
 		{
 			return columns_.size();
@@ -259,6 +265,12 @@ namespace tucan {
 			, rowid_(0)
 		{}
 
+		void clear()
+		{
+			rowid_ = 0;
+			record_.clear();
+		}
+
 		rowid_t rowid() const noexcept
 		{
 			return rowid_;
@@ -432,6 +444,12 @@ namespace tucan {
 		status_t add_column(const name_t& name, type_t type) noexcept
 		{
 			return record_.add_column(name, type);
+		}
+
+		void clear() noexcept
+		{
+			name_ = "";
+			record_.clear();
 		}
 	};
 

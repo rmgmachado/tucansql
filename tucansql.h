@@ -31,9 +31,8 @@
 
 namespace tucan {
 
-   namespace sql
-   {
-      enum status_t : int {ok, syntax_error};
+   namespace sql {
+      using status_t = int;
    }
 
    using sqlid_t = size_t;
@@ -43,7 +42,7 @@ namespace tucan {
    class sql_t
    {
       database_t db_;
-      std::vector<parser_t> stmt_;
+      std::vector<parser_t> parsers_;
 
 
    public:
@@ -54,29 +53,37 @@ namespace tucan {
       sql_t& operator=(const sql_t&) = delete;
       sql_t& operator=(sql_t&&) = default;
 
-      sql::status_t prepare(sqlid_t& id, const std::string& stmt) noexcept
+      database_t& database() noexcept
       {
-         return sql::ok;
+         return db_;
+      }
+
+      int prepare(sqlid_t& id, const std::string& stmt) noexcept
+      {
+         parsers_.push_back(parser_t(db_, stmt));
+         id = std::distance(parsers_.begin(), parsers_.end());
+         if (!parsers_[id].run()) return parsers_[id].get_error_code();
+         return parser::ok;
       }
 
       sql::status_t execute(const sqlid_t& id) noexcept
       {
-         return sql::ok;
+         return parser::ok;
       }
 
       sql::status_t next(const sqlid_t& id) noexcept
       {
-         return sql::ok;
+         return parser::ok;
       }
 
       sql::status_t reset(const sqlid_t& id) noexcept
       {
-         return sql::ok;
+         return parser::ok;
       }
 
       sql::status_t finalize(const sqlid_t& id) noexcept
       {
-         return sql::ok;
+         return parser::ok;
       }
 
       count_t row_count() const noexcept
