@@ -134,7 +134,6 @@
     <ClInclude Include="decimal.h" />
     <ClInclude Include="memdb.h" />
     <ClInclude Include="ptree.h" />
-    <ClInclude Include="runtime.h" />
     <ClInclude Include="scanner.h" />
     <ClInclude Include="sqlparser.h" />
     <ClInclude Include="system.h" />
@@ -152,6 +151,7 @@
     <ClCompile Include="tests\test_decimal.cpp" />
     <ClCompile Include="tests\test_memdb.cpp" />
     <ClCompile Include="tests\test_scanner.cpp" />
+    <ClCompile Include="tests\test_sqlparser.cpp" />
     <ClCompile Include="tests\xpunit.cpp" />
   </ItemGroup>
   <ItemGroup>

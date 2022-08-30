@@ -144,10 +144,14 @@ namespace tucan {
 
       token_t* next() noexcept
       {
-         current_ = ptr_;
-         size_t idx = std::distance(tokens_.begin(), ptr_);
-         ptr_++;
-         return &tokens_[idx];
+         if (ptr_ != tokens_.end())
+         {
+            current_ = ptr_;
+            size_t idx = std::distance(tokens_.begin(), ptr_);
+            ptr_++;
+            return &tokens_[idx];
+         }
+         return nullptr;
       }
 
       void rewind() noexcept

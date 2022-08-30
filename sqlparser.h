@@ -26,6 +26,7 @@
 \*****************************************************************************/
 #pragma once
 
+#include <memory>
 #include <functional>
 #include <stack>
 
@@ -41,10 +42,56 @@ namespace tucan {
 
    namespace parser {
 
-      enum status_t : int { ok, syntax_error };
+      enum status_t : int { ok = 0, syntax_error, duplicate };
    }
 
-   using stack_t = std::stack<value_t>;
+   class stack_t
+   {
+      std::stack<value_t> stack_;
+
+   public:
+      stack_t() = default;
+      ~stack_t() = default;
+      stack_t(const stack_t&) = default;
+      stack_t(stack_t&&) = default;
+      stack_t& operator=(const stack_t&) = default;
+      stack_t& operator=(stack_t&&) = default;
+
+      void push(const value_t& value) noexcept
+      {
+         stack_.push(value);
+      }
+
+      value_t top() const noexcept
+      {
+         if (!stack_.empty())
+         {
+            return stack_.top();
+         }
+         return value_t();
+      }
+
+      value_t pop() noexcept
+      {
+         if (!stack_.empty())
+         {
+            value_t value = stack_.top();
+            stack_.pop();
+            return value;
+         }
+         return value_t();
+      }
+
+      bool empty() const noexcept
+      {
+         return stack_.empty();
+      }
+
+      size_t size() const noexcept
+      {
+         return stack_.size();
+      }
+   };
 
    class parser_t
    {
@@ -55,11 +102,18 @@ namespace tucan {
       scanner_t scan_;
       database_t& db_;
       name_t table_;
+      std::vector<std::shared_ptr<ptree_t>> nodes_;
+      table_t result_;
+      stack_t stack_;
+      count_t rows_affected_;
 
    public:
-      parser_t() = delete;
-      parser_t(parser_t&&) = delete;
-      parser_t& operator=(parser_t&&) = delete;
+      parser_t() = default;
+      ~parser_t() = default;
+      parser_t(const parser_t&) = default;
+      parser_t(parser_t&&) = default;
+      parser_t& operator=(const parser_t&) = default;
+      parser_t& operator=(parser_t&&) = default;
 
       parser_t(database_t& db, const std::string& stmt) noexcept
          : stmt_(stmt)
@@ -69,36 +123,26 @@ namespace tucan {
          , scan_(stmt)
          , db_(db)
          , table_()
+         , nodes_()
+         , result_()
+         , stack_()
+         , rows_affected_(0)
       {}
-
-      parser_t(parser_t& other) noexcept
-         : stmt_(other.stmt_)
-         , error_(other.error_)
-         , errmsg_(other.errmsg_)
-         , ptree_(other.ptree_)
-         , scan_(other.stmt_)
-         , db_(other.db_)
-         , table_(other.table_)
-      {}
-
-      ~parser_t() noexcept
-      {
-         ptree_t::clear();
-      }
 
       bool run() noexcept
       {
          error_ = 0;
          errmsg_ = "No error detected";
-         ptree_t::clear();
+         nodes_.clear();
          scan_.run(stmt_);
          if (!sql_parser((void*)this))
          {
             return context_check();
          }
+         return false;
       }
 
-      void set_error(int err, const char* msg) noexcept
+      void set_error(int err, const char* msg, const token_t& token) noexcept
       {
          if (error_ == 0)
          {
@@ -107,6 +151,10 @@ namespace tucan {
                " (" + std::to_string(scan_.current().line()) + ":" + std::to_string(scan_.current().column()) + ") " +
                msg;
          }
+      }
+      void set_error(int err, const char* msg) noexcept
+      {
+         set_error(err, msg, scan_.current());
       }
 
       inline scanner_t& scanner() noexcept
@@ -129,15 +177,54 @@ namespace tucan {
          return table_;
       }
 
-      void table(const name_t& tb)
+      void table(const name_t& tb) noexcept
       {
          table_ = tb;
+      }
+
+      stack_t& stack() noexcept
+      {
+         return stack_;
+      }
+
+      int get_error_code() const noexcept
+      {
+         return error_;
+      }
+
+      text_t get_error_message() const noexcept
+      {
+         return errmsg_;
+      }
+
+      ptree_t* make(parser_t* parser, int opcode, const token_t& token, const value_t& value, ptree_t* left, ptree_t* right) noexcept
+      {
+         auto tree = std::shared_ptr<ptree_t>(new ptree_t(parser, opcode, token, value, left, right));
+         nodes_.push_back(tree);
+         return tree.get();
       }
 
       bool context_check() noexcept;
    };
 
-   namespace dispatch {
+   // alwyas use make_ptree to create ptree_t objects. 
+   inline ptree_t* make_ptree(parser_t* parser, int opcode, const token_t& token, const value_t& value, ptree_t* left = nullptr, ptree_t* right = nullptr) noexcept
+   {
+      if (parser)
+      {
+         return parser->make(parser, opcode, token, value, left, right);
+      }
+      return nullptr;
+   }
+
+   inline ptree_t* make_ptree(parser_t* parser, int opcode, const token_t* token, const value_t& value, ptree_t* left = nullptr, ptree_t* right = nullptr) noexcept
+   {
+      if (!parser) return nullptr;
+      token_t tok = token != nullptr ? *token : token_t();
+      return parser->make(parser, opcode, tok, value, left, right);
+   }
+
+   namespace context {
 
       inline bool check_noop(ptree_t* tree) noexcept 
       { 
@@ -173,9 +260,54 @@ namespace tucan {
       inline bool check_where_true(ptree_t* tree) noexcept { return true; }
       inline bool check_assign_list(ptree_t* tree) noexcept { return true; }
       inline bool check_assign(ptree_t* tree) noexcept { return true; }
-      inline bool check_field_def(ptree_t* tree) noexcept { return true; }
+      
+      inline bool check_field_def(ptree_t* tree) noexcept 
+      { 
+         // push field type then push field name
+         tree->parser()->stack().push(tree->value());
+         tree->parser()->stack().push(value_t(tree->token().text()));
+         return true; 
+      }
+
+      inline bool check_field_def_list(ptree_t* tree) noexcept 
+      { 
+         return true; 
+      }
+      
       inline bool check_field_name(ptree_t* tree) noexcept { return true; }
-      inline bool check_create_table(ptree_t* tree) noexcept { return true; }
+
+      inline bool check_create_table_field_duplicated(ptree_t* tree) noexcept
+      {
+         using pair_t = std::pair<value_t, value_t>;
+         std::vector<pair_t> names;
+         while (!tree->parser()->stack().empty())
+         {
+            value_t fname = tree->parser()->stack().pop();
+            value_t ftype = tree->parser()->stack().pop();
+            for (auto& item : names)
+            {
+               if (compare(get_value<text_t>(fname), get_value<text_t>(item.first)))
+               {
+                  tree->parser()->set_error(parser::duplicate, text_t("duplicate field " + get_value<text_t>(fname)).c_str());
+                  return false;
+               }
+            }
+            names.push_back(pair_t(fname, ftype));
+         }
+         return true;
+      }
+
+      inline bool check_create_table(ptree_t* tree) noexcept 
+      { 
+         database_t& db(tree->parser()->database());
+         if (db.table_exists(tree->token().text()) == status_t::ok)
+         {
+            tree->parser()->set_error(parser::duplicate, text_t("table exists " + tree->token().text()).c_str());
+            return false;
+         }
+         return check_create_table_field_duplicated(tree);
+      }
+
       inline bool check_insert(ptree_t* tree) noexcept { return true; }
       inline bool check_insert_values(ptree_t* tree) noexcept { return true; }
       inline bool check_update(ptree_t* tree) noexcept { return true; }
@@ -216,6 +348,7 @@ namespace tucan {
          , check_assign_list
          , check_assign
          , check_field_def
+         , check_field_def_list
          , check_field_name
          , check_create_table
          , check_insert
@@ -229,14 +362,14 @@ namespace tucan {
          , check_select_from
          , check_field_all
       };
-   } // namespace dispatch
+   } // namespace context
 
    inline bool check_context(ptree_t* tree) noexcept
    {
       if (!tree) return true;
       if (check_context(tree->left()) && check_context(tree->right()))
       {
-         return dispatch::table[tree->opcode()](tree);
+         return context::table[tree->opcode()](tree);
       }
       return false;
    }

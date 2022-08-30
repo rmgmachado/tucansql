@@ -114,4 +114,19 @@ namespace tucan {
 			     }));
 	}
 
+	template <typename T>
+	inline bool compare(const T& lhs, const T rhs)
+	{
+		return lhs == rhs;
+	}
+
+	template <typename T>
+	inline bool exists(const std::vector<T>& container, const T& item)
+	{
+		for (auto& c : container)
+		{
+			if (compare(c, item)) return true;
+		}
+		return false;
+	}
 } // namespace tucan

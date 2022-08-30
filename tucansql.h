@@ -37,7 +37,6 @@ namespace tucan {
    }
 
    using sqlid_t = size_t;
-   using stack_t = std::stack<value_t>;
 
    inline bool execute(ptree_t* tree) noexcept;
 
@@ -45,10 +44,6 @@ namespace tucan {
    {
       database_t db_;
       std::vector<parser_t> stmt_;
-      table_t result_;
-      stack_t stack_;
-      stack_t stack_;
-      count_t rows_affected_;
 
 
    public:
@@ -162,6 +157,7 @@ namespace tucan {
       inline bool exec_assign_list(ptree_t* tree) noexcept { return true; }
       inline bool exec_assign(ptree_t* tree) noexcept { return true; }
       inline bool exec_field_def(ptree_t* tree) noexcept { return true; }
+      inline bool exec_field_def_list(ptree_t* tree) noexcept { return true; }
       inline bool exec_field_name(ptree_t* tree) noexcept { return true; }
       inline bool exec_create_table(ptree_t* tree) noexcept { return true; }
       inline bool exec_insert(ptree_t* tree) noexcept { return true; }
@@ -218,12 +214,12 @@ namespace tucan {
          , exec_field_all
       };
 
-      inline bool exec_ptree(ptree_t* tree) noexcept
+      inline bool execute_ptree(ptree_t* tree) noexcept
       {
          if (!tree) return true;
-         if (exec_ptree(tree->left()) && exec_ptree(tree->right()))
+         if (execute_ptree(tree->left()) && execute_ptree(tree->right()))
          {
-            return dispatch::table[tree->opcode()](tree);
+            return runtime::table[tree->opcode()](tree);
          }
          return false;
       }
@@ -233,7 +229,7 @@ namespace tucan {
    inline bool execute(ptree_t* tree) noexcept
    {
       if (!tree) return false;
-      return runtime::exec_ptree(tree);
+      return runtime::execute_ptree(tree);
    }
 
 

@@ -101,7 +101,7 @@ void sql_error(void* handle, const char* s);
 %type		<ytree>	sql_add_expression sql_mult_expression sql_unary_expression 
 %type		<ytree>	sql_primary_expression sql_literal sql_identifier
 %type		<ytree>	sql_select_expression_list sql_select_expression
-%type		<ytree>	sql_insert_column_name_list_opt sql_column_type
+%type		<ytree>	sql_insert_column_name_list_opt
 %type		<ytree>	sql_select_expression_list_or_star
 
 /*****************************************************************************\
@@ -139,7 +139,8 @@ sql_commands
 sql_command
 	: CREATE TABLE IDENTIFIER '(' sql_column_definition_list ')'
 	  {
-			$$ = make_ptree(get_parser(handle), ptree::create_table, $3, make_text_value($3->text()), $5);
+			ptree_t* create_table = make_ptree(get_parser(handle), ptree::create_table, $3, make_text_value($3->text()), $5);
+			$$ = create_table;
 	  }
 	| INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
 	  {
@@ -215,54 +216,53 @@ sql_select_expression
 sql_column_definition_list
 	: sql_column_definition
 	  {
-			$$ = $1;
+			ptree_t* coldef = make_ptree(get_parser(handle), ptree::field_def_list, token_t(), value_t(), $1);
+			$$ = coldef;
 	  }
 	| sql_column_definition_list ',' sql_column_definition
 	  {
-			$3->right($1);
-			$$ = $3;
+			ptree_t* coldef_list = make_ptree(get_parser(handle), ptree::field_def_list, token_t(), value_t(), $3, $1);
+			$$ = coldef_list;
 	  }
 	;
 	
 sql_column_definition
-	: IDENTIFIER sql_column_type
+	: IDENTIFIER BOOLEAN_
 	  {
-			$2->token(*$1);
-			$$ = $2;
+			ptree_t* field_def = make_ptree(get_parser(handle), ptree::field_def, $1, value_t(false));
+			$$ = field_def;
+	  }
+	| IDENTIFIER INTEGER
+	  {
+			ptree_t* field_def = make_ptree(get_parser(handle), ptree::field_def, $1, value_t(0ll));
+			$$ = field_def;
+	  }
+	| IDENTIFIER DECIMAL
+	  {
+			ptree_t* field_def = make_ptree(get_parser(handle), ptree::field_def, $1, value_t(decimal_t()));
+			$$ = field_def;
+	  }
+	| IDENTIFIER DATETIME
+	  {
+			ptree_t* field_def = make_ptree(get_parser(handle), ptree::field_def, $1, value_t(datetime_t()));
+			$$ = field_def;
+	  }
+	| IDENTIFIER TEXT
+	  {
+			ptree_t* field_def = make_ptree(get_parser(handle), ptree::field_def, $1, value_t(text_t()));
+			$$ = field_def;
+	  }
+	| IDENTIFIER BINARY
+	  {
+			ptree_t* field_def = make_ptree(get_parser(handle), ptree::field_def, $1, value_t(binary_t()));
+			$$ = field_def;
 	  }
 	;
 	
-sql_column_type
-	: BOOLEAN_
-	  {
-			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(false));
-	  }
-	| INTEGER
-	  {
-			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(0ll));
-	  }
-	| DECIMAL
-	  {
-			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(decimal_t()));
-	  }
-	| DATETIME
-	  {
-			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(datetime_t()));
-	  }
-	| TEXT
-	  {
-			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(text_t()));
-	  }
-	| BINARY
-	  {
-			$$ =  make_ptree(get_parser(handle), ptree::field_def, $1, value_t(binary_t()));
-	  }
-	;
-
 sql_insert_column_name_list_opt
 	:
 	  {
-			$$ = nullptr;
+			$$ = 0;
 	  }
 	| '(' sql_column_name_list ')'
 	  {
@@ -277,7 +277,7 @@ sql_column_name_list
 	  }
 	| sql_column_name_list ',' IDENTIFIER
 	  {
-			$$ = make_ptree(get_parser(handle), ptree::field_name, $3, value_t(), nullptr, $1);
+			$$ = make_ptree(get_parser(handle), ptree::field_name, $3, value_t(), 0, $1);
 	  }
 	;
 	
@@ -303,7 +303,7 @@ sql_column_assign
 sql_where_clause_opt
 	:
 	  {
-			$$ = make_ptree(get_parser(handle), ptree::where_true, nullptr, value_t(true));
+			$$ = make_ptree(get_parser(handle), ptree::where_true, 0, value_t(true));
 	  }
 	| sql_where_clause
 	  {
@@ -435,7 +435,7 @@ sql_unary_expression
 	  }
 	| '+' sql_primary_expression %prec SQL_UMINUS
 	  {
-			$$ = make_ptree(get_parser(handle), ptree::plus, $1, value_t(decimal_t()), $2);$2;
+			$$ = make_ptree(get_parser(handle), ptree::plus, $1, value_t(decimal_t()), $2);
 	  }
 	| '-' sql_primary_expression %prec SQL_UMINUS
 	  {
@@ -590,7 +590,7 @@ int sql_lex(YYSTYPE *lvalp, void* handle)
 			if (id == token::eof) return id;
 			switch (id)
 			{
-				case token::identifier: ptr->id(LookupReservedWord(ptr, IDENTIFIER); break;
+				case token::identifier: ptr->id(LookupReservedWord(ptr, IDENTIFIER)); break;
 				case token::decimal: ptr->id(DECIMAL_LITERAL); break;
 				case token::datetime: ptr->id(DATETIME_LITERAL); break;
 				case token::text: ptr->id(TEXT_LITERAL); break;
@@ -602,7 +602,7 @@ int sql_lex(YYSTYPE *lvalp, void* handle)
 				{
 					std::string str("Unknown or invalid token: ");
 					str += ptr->text();
-					sql_set+error(handle, str.c_str(), parser::syntax_error);
+					sql_set_error(handle, str.c_str(), parser::syntax_error);
 					break;
 				}
 			}
