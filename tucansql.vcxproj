@@ -152,6 +152,7 @@
     <ClCompile Include="tests\test_memdb.cpp" />
     <ClCompile Include="tests\test_scanner.cpp" />
     <ClCompile Include="tests\test_sqlparser.cpp" />
+    <ClCompile Include="tests\test_tucansql.cpp" />
     <ClCompile Include="tests\xpunit.cpp" />
   </ItemGroup>
   <ItemGroup>

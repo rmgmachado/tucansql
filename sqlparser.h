@@ -42,7 +42,15 @@ namespace tucan {
 
    namespace parser {
 
-      enum status_t : int { ok = 0, syntax_error, duplicate };
+      enum status_t : int 
+      {  
+           ok = 0
+         , syntax_error
+         , duplicate
+         , invalid_name
+         , table_create_error
+         , invalid_handle
+      };
    }
 
    class stack_t
@@ -181,6 +189,11 @@ namespace tucan {
          ptree_ = tree;
       }
 
+      ptree_t* get_tree() noexcept
+      {
+         return ptree_;
+      }
+
       database_t& database() noexcept
       {
          return db_;
@@ -209,6 +222,15 @@ namespace tucan {
       text_t get_error_message() const noexcept
       {
          return errmsg_;
+      }
+
+      void clear_execution() noexcept
+      {
+         error_ = 0;
+         errmsg_ = "";
+         result_.clear();
+         stack_.clear();
+         rows_affected_ = 0;
       }
 
       ptree_t* make(parser_t* parser, int opcode, const token_t& token, const value_t& value, ptree_t* left, ptree_t* right) noexcept
@@ -250,15 +272,8 @@ namespace tucan {
 
    namespace context {
 
-      inline bool check_noop(ptree_t* tree) noexcept 
-      { 
-         return true; 
-      }
-
-      inline bool check_push_field(ptree_t* tree) noexcept 
-      { 
-         return true; 
-      }
+      inline bool check_noop(ptree_t* tree) noexcept {  return true; }
+      inline bool check_push_field(ptree_t* tree) noexcept { return true; }
 
       inline bool check_push_table(ptree_t* tree) noexcept { return true; }
       inline bool check_push_literal(ptree_t* tree) noexcept { return true; }
