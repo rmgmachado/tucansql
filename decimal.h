@@ -309,7 +309,7 @@ namespace std
 	template <int SCALE>
 	inline std::string to_string(const tucan::decimal_base_t<SCALE>& dec) noexcept
 	{
-		int64_t integer = dec() / tucan::decimal::precision[SCALE];
+		int64_t integer = int64_t(dec() / tucan::decimal::precision[SCALE]);
 		std::string str = std::to_string(integer);
 		int64_t frac = std::abs(dec()) % tucan::decimal::precision[SCALE];
 
@@ -320,7 +320,7 @@ namespace std
 		if (frac > 0)
 		{
 			std::string frac_str = std::to_string(frac);
-			int scale = SCALE - frac_str.length();
+			int scale = SCALE - int(frac_str.length());
 
 			if (scale > 0)
 			{

@@ -36,7 +36,7 @@ namespace tucan {
       size_t npos = -1;
    }
 
-   using sqlid_t = int;
+   using sqlid_t = size_t;
 
 
    inline bool execute_tree(ptree_t* tree) noexcept;
