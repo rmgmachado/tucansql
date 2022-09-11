@@ -81,7 +81,7 @@ namespace tucan {
    class ptree_t
    {
    public:
-      int opcode_;
+      ptree::opcode_t opcode_;
       token_t token_;
       value_t value_;
       parser_t* parser_;
@@ -103,7 +103,7 @@ namespace tucan {
          , right_(nullptr)
       {}
 
-      ptree_t(parser_t* parser, int opcode, const token_t& token, const value_t& value, ptree_t* left, ptree_t* right)
+      ptree_t(parser_t* parser, ptree::opcode_t opcode, const token_t& token, const value_t& value, ptree_t* left, ptree_t* right)
          : opcode_(opcode)
          , token_(token)
          , value_(value)
@@ -112,7 +112,7 @@ namespace tucan {
          , right_(right)
       {}
 
-      int opcode() const noexcept
+      ptree::opcode_t opcode() const noexcept
       {
          return opcode_;
       }
