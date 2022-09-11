@@ -148,6 +148,7 @@
     <ClInclude Include="src\scanner.h" />
     <ClInclude Include="src\sqlparser.h" />
     <ClInclude Include="src\system.h" />
+    <ClInclude Include="src\token.h" />
     <ClInclude Include="src\tucansql.h" />
     <ClInclude Include="src\utility.h" />
     <ClInclude Include="src\value.h" />
