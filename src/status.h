@@ -24,39 +24,27 @@
 *  You should have received a copy of the MIT License along with this program.
 *  If not, see https://opensource.org/licenses/MIT.
 \*****************************************************************************/
-#include "xpunit.h"
-#include "sqlparser.h"
+#pragma once
 
-using namespace tucan;
+namespace tucan {
 
-TEST_CASE("sqlparser_t tests", "[sqlparser]")
-{
-   SECTION("Test successful parsing of CREATE TABLE")
-   {
-      std::string stmt = "CREATE TABLE table1 (field1 boolean)";
-      database_t db;
-      parser_t parser(db);
+   namespace status {
 
-      REQUIRE(parser.run(stmt));
+      enum status_e : int 
+      {  
+           ok = 0
+         , syntax_error
+         , duplicate
+         , invalid_name
+         , table_create_error
+         , invalid_handle
+         , not_found
+         , invalid_type
+         , empty
+      };
    }
-   SECTION("Test parsing of CREATE TABLE with syntax error")
-   {
-      std::string stmt = "CREATE TABLE table1 (field1 boolean, field2)";
-      database_t db;
-      parser_t parser(db);
 
-      REQUIRE(parser.run(stmt) == false);
-      REQUIRE(parser.get_error_code() == status::syntax_error);
-      REQUIRE(parser.get_error_message().length() > 0);
-   }
-   SECTION("Test parsing of CREATE TABLE with duplicate field error")
-   {
-      std::string stmt = "CREATE TABLE table1 (field1 boolean, field2 decimal, field1 integer)";
-      database_t db;
-      parser_t parser(db);
+   using status_t = status::status_e;
 
-      REQUIRE(parser.run(stmt) == false);
-      REQUIRE(parser.get_error_code() == status::duplicate);
-      REQUIRE(parser.get_error_message().length() > 0);
-   }
-}
+} // namespace tucan
+

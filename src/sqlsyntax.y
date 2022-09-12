@@ -520,11 +520,11 @@ void sql_error(void* handle, const char* s)
    parser_t* parser = get_parser(handle);
    if (parser)
    {
-      parser->set_error(parser::syntax_error, s);
+      parser->set_error(status::syntax_error, s);
    }
 }
 
-void sql_set_error(void* handle, const char* s, int code)
+void sql_set_error(void* handle, const char* s, status_t code)
 {
    parser_t* parser = get_parser(handle);
    if (parser)

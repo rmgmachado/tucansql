@@ -147,6 +147,8 @@
     <ClInclude Include="src\ptree.h" />
     <ClInclude Include="src\scanner.h" />
     <ClInclude Include="src\sqlparser.h" />
+    <ClInclude Include="src\stack.h" />
+    <ClInclude Include="src\status.h" />
     <ClInclude Include="src\system.h" />
     <ClInclude Include="src\token.h" />
     <ClInclude Include="src\tucansql.h" />

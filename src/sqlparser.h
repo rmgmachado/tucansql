@@ -26,94 +26,24 @@
 \*****************************************************************************/
 #pragma once
 
-#include <memory>
 #include <functional>
-#include <stack>
-#include <map>
+
 
 #include "value.h"
 #include "scanner.h"
 #include "ptree.h"
 #include "memdb.h"
+#include "stack.h"
+#include "status.h"
 
 int sql_parser(void* pt);
 
 namespace tucan {
 
-
-   namespace parser {
-
-      enum status_t : int 
-      {  
-           ok = 0
-         , syntax_error
-         , duplicate
-         , invalid_name
-         , table_create_error
-         , invalid_handle
-      };
-   }
-
-   class stack_t
-   {
-      std::stack<value_t> stack_;
-
-   public:
-      stack_t() = default;
-      ~stack_t() = default;
-      stack_t(const stack_t&) = default;
-      stack_t(stack_t&&) = default;
-      stack_t& operator=(const stack_t&) = default;
-      stack_t& operator=(stack_t&&) = default;
-
-      void push(const value_t& value) noexcept
-      {
-         stack_.push(value);
-      }
-
-      value_t top() const noexcept
-      {
-         if (!stack_.empty())
-         {
-            return stack_.top();
-         }
-         return value_t();
-      }
-
-      value_t pop() noexcept
-      {
-         if (!stack_.empty())
-         {
-            value_t value = stack_.top();
-            stack_.pop();
-            return value;
-         }
-         return value_t();
-      }
-
-      bool empty() const noexcept
-      {
-         return stack_.empty();
-      }
-
-      size_t size() const noexcept
-      {
-         return stack_.size();
-      }
-
-      void clear() noexcept
-      {
-         while (!stack_.empty())
-         {
-            stack_.pop();
-         }
-      }
-   };
-
    class parser_t
    {
       std::string stmt_;
-      int error_;
+      status_t error_;
       std::string errmsg_;
       ptree_t* ptree_;
       scanner_t scan_;
@@ -134,7 +64,7 @@ namespace tucan {
 
       parser_t(database_t& db) noexcept
          : stmt_()
-         , error_(0)
+         , error_(status::ok)
          , errmsg_()
          , ptree_(nullptr)
          , scan_()
@@ -165,7 +95,7 @@ namespace tucan {
          return false;
       }
 
-      void set_error(int err, const char* msg, const token_t& token) noexcept
+      void set_error(status_t err, const char* msg, const token_t& token) noexcept
       {
          if (error_ == 0)
          {
@@ -175,7 +105,7 @@ namespace tucan {
                msg;
          }
       }
-      void set_error(int err, const char* msg) noexcept
+      void set_error(status_t err, const char* msg) noexcept
       {
          set_error(err, msg, scan_.current());
       }
@@ -215,7 +145,7 @@ namespace tucan {
          return stack_;
       }
 
-      int get_error_code() const noexcept
+      status_t get_error_code() const noexcept
       {
          return error_;
       }
@@ -227,7 +157,7 @@ namespace tucan {
 
       void clear_execution() noexcept
       {
-         error_ = 0;
+         error_ = status::ok;
          errmsg_ = "";
          result_.clear();
          stack_.clear();
@@ -298,7 +228,7 @@ namespace tucan {
             {
                if (compare(get_value<text_t>(fname), get_value<text_t>(item.first)))
                {
-                  tree_parser(tree)->set_error(parser::duplicate, text_t("duplicate field " + get_value<text_t>(fname)).c_str());
+                  tree_parser(tree)->set_error(status::duplicate, text_t("duplicate field " + get_value<text_t>(fname)).c_str());
                   return false;
                }
             }
@@ -312,54 +242,54 @@ namespace tucan {
          database_t& db(tree->parser()->database());
          if (db.table_exists(tree->token().text()) == status_t::ok)
          {
-            tree->parser()->set_error(parser::duplicate, text_t("table exists " + tree->token().text()).c_str());
+            tree->parser()->set_error(status::duplicate, text_t("table exists " + tree->token().text()).c_str());
             return false;
          }
          return check_create_table_field_duplicated(tree);
       }
 
-      inline static std::map<ptree::opcode_t, std::function<bool(ptree_t*)>> context_dispatch_table =
+      inline static std::array<std::function<bool(ptree_t*)>, 40> context_dispatch_table =
       {
-           { ptree::noop,             [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::push_field,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::push_table,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::push_literal,     [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::minus,            [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::plus,             [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::negate,           [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::multiply,         [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::divide,           [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::add,              [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::subtract,         [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::equal,            [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::not_equal,        [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::less,             [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::less_equal,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::greater,          [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::greater_equal,    [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::is_null,          [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::is_not_null,      [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::logical_or,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::logical_and,      [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::expr,             [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::where,            [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::where_true,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::assign_list,      [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::assign,           [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::field_def,        [](ptree_t* tree) -> bool { return check_field_def(tree); } }
-         , { ptree::field_def_list,   [](ptree_t* tree) -> bool { return check_field_def_list(tree); }}
-         , { ptree::field_name,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::create_table,     [](ptree_t* tree) -> bool { return check_create_table(tree); } }
-         , { ptree::insert,           [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::insert_values,    [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::update,           [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::update_set,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::drop_table,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::delete_row,       [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::select,           [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::select_where,     [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::select_from,      [](ptree_t* tree) -> bool { return true; } }
-         , { ptree::field_all,        [](ptree_t* tree) -> bool { return true; } }
+         /* noop 				*/   [](ptree_t* tree) -> bool { return true; }
+         /* push_field 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* push_table 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* push_literal 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* minus 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* plus 				*/ , [](ptree_t* tree) -> bool { return true; }
+         /* negate 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* multiply 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* divide 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* add 				*/ , [](ptree_t* tree) -> bool { return true; }
+         /* subtract 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* equal 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* not_equal 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* less 				*/ , [](ptree_t* tree) -> bool { return true; }
+         /* less_equal 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* greater 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* greater_equal 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* is_null 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* is_not_null 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* logical_or 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* logical_and 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* expr 				*/ , [](ptree_t* tree) -> bool { return true; }
+         /* where 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* where_true 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* assign_list 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* assign 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* field_def 		*/ , [](ptree_t* tree) -> bool { return check_field_def(tree); }
+         /* field_def_list */ , [](ptree_t* tree) -> bool { return check_field_def_list(tree); }
+         /* field_name 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* create_table 	*/ , [](ptree_t* tree) -> bool { return check_create_table(tree); }
+         /* insert 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* insert_values 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* update 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* update_set 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* drop_table 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* delete_row 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* select 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* select_where 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* select_from 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* field_all 		*/ , [](ptree_t* tree) -> bool { return true; } 
       };
    } // namespace context
 

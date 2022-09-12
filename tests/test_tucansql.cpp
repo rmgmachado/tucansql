@@ -36,10 +36,10 @@ TEST_CASE("sqlparser_t tests", "[sqlparser]")
       sql_t sql;
       sqlid_t handle;
 
-      REQUIRE((handle = sql.prepare("CREATE TABLE person (name text, age integer)")) == parser::ok);
+      REQUIRE((handle = sql.prepare("CREATE TABLE person (name text, age integer)")) == status::ok);
       if (handle != sql::npos)
       {
-         REQUIRE(sql.execute(handle) == parser::ok);
+         REQUIRE(sql.execute(handle) == status::ok);
          REQUIRE(sql.database().table_exists("person") == status_t::ok);
 
          cursor_t cursor = sql.database().get_table("person").get_cursor();

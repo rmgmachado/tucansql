@@ -24,39 +24,68 @@
 *  You should have received a copy of the MIT License along with this program.
 *  If not, see https://opensource.org/licenses/MIT.
 \*****************************************************************************/
-#include "xpunit.h"
-#include "sqlparser.h"
+#pragma once
 
-using namespace tucan;
+#include <stack>
 
-TEST_CASE("sqlparser_t tests", "[sqlparser]")
-{
-   SECTION("Test successful parsing of CREATE TABLE")
+#include "value.h"
+
+namespace tucan {
+
+   class stack_t
    {
-      std::string stmt = "CREATE TABLE table1 (field1 boolean)";
-      database_t db;
-      parser_t parser(db);
+      std::stack<value_t> stack_;
 
-      REQUIRE(parser.run(stmt));
-   }
-   SECTION("Test parsing of CREATE TABLE with syntax error")
-   {
-      std::string stmt = "CREATE TABLE table1 (field1 boolean, field2)";
-      database_t db;
-      parser_t parser(db);
+   public:
+      stack_t() = default;
+      ~stack_t() = default;
+      stack_t(const stack_t&) = default;
+      stack_t(stack_t&&) = default;
+      stack_t& operator=(const stack_t&) = default;
+      stack_t& operator=(stack_t&&) = default;
 
-      REQUIRE(parser.run(stmt) == false);
-      REQUIRE(parser.get_error_code() == status::syntax_error);
-      REQUIRE(parser.get_error_message().length() > 0);
-   }
-   SECTION("Test parsing of CREATE TABLE with duplicate field error")
-   {
-      std::string stmt = "CREATE TABLE table1 (field1 boolean, field2 decimal, field1 integer)";
-      database_t db;
-      parser_t parser(db);
+      void push(const value_t& value) noexcept
+      {
+         stack_.push(value);
+      }
 
-      REQUIRE(parser.run(stmt) == false);
-      REQUIRE(parser.get_error_code() == status::duplicate);
-      REQUIRE(parser.get_error_message().length() > 0);
-   }
-}
+      value_t top() const noexcept
+      {
+         if (!stack_.empty())
+         {
+            return stack_.top();
+         }
+         return value_t();
+      }
+
+      value_t pop() noexcept
+      {
+         if (!stack_.empty())
+         {
+            value_t value = stack_.top();
+            stack_.pop();
+            return value;
+         }
+         return value_t();
+      }
+
+      bool empty() const noexcept
+      {
+         return stack_.empty();
+      }
+
+      size_t size() const noexcept
+      {
+         return stack_.size();
+      }
+
+      void clear() noexcept
+      {
+         while (!stack_.empty())
+         {
+            stack_.pop();
+         }
+      }
+   };
+
+} // namespace tucan

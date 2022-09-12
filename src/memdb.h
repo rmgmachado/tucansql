@@ -27,10 +27,9 @@
 #pragma once
 
 #include "value.h"
+#include "status.h"
 
 namespace tucan {
-
-	enum class status_t { ok, invalid_type, invalid_name, duplicate, not_found, empty };
 
 	using name_t = std::string;
 	using rowid_t = unsigned int;
@@ -113,8 +112,8 @@ namespace tucan {
 
 		status_t add_column(const name_t& name, type_t type) noexcept
 		{
-			if (!validate(name, "[a-zA-Z][a-zA-Z0-9_]*")) return status_t::invalid_name;
-			if (find_column(name) != memdb::npos) return status_t::duplicate;
+			if (!validate(name, "[a-zA-Z][a-zA-Z0-9_]*")) return status::invalid_name;
+			if (find_column(name) != memdb::npos) return status::duplicate;
 			columns_.push_back(column_t(name, type));
 			if (row_count() > 0)
 			{
@@ -123,12 +122,12 @@ namespace tucan {
 					row.push_back(value_t());
 				}
 			}
-			return status_t::ok;
+			return status::ok;
 		}
 
 		status_t delete_column(colid_t colid) noexcept
 		{
-			if (colid >= column_count()) return status_t::not_found;
+			if (colid >= column_count()) return status::not_found;
 			auto cptr = columns_.begin();
 			std::advance(cptr, colid);
 			columns_.erase(cptr);
@@ -141,14 +140,14 @@ namespace tucan {
 					row.erase(rptr);
 				}
 			}
-			return status_t::ok;
+			return status::ok;
 		}
 
 		status_t get_row(rowid_t rowid, row_t& row) const noexcept
 		{
-			if (rowid >= row_count()) return status_t::not_found;
+			if (rowid >= row_count()) return status::not_found;
 			row = rows_[rowid];
-			return status_t::ok;
+			return status::ok;
 		}
 
 		rowid_t add_row() noexcept
@@ -160,12 +159,12 @@ namespace tucan {
 
 		status_t delete_row(rowid_t rowid) noexcept
 		{
-			if (row_count() == 0) return status_t::empty;
-			if (rowid >= row_count()) return status_t::not_found;
+			if (row_count() == 0) return status::empty;
+			if (rowid >= row_count()) return status::not_found;
 			auto ptr = rows_.begin();
 			std::advance(ptr, rowid);
 			rows_.erase(ptr);
-			return status_t::ok;
+			return status::ok;
 		}
 
 		bool is_column_null(rowid_t rowid, colid_t colid) const noexcept
@@ -192,14 +191,14 @@ namespace tucan {
 			if (value.type() == type_t::integer)
 			{
 				rows_[rowid][colid] = value;
-				return status_t::ok;
+				return status::ok;
 			}
 			if (value.type() == type_t::decimal)
 			{
 				rows_[rowid][colid] = value_t(get_value<integer_t>(value));
-				return status_t::ok;
+				return status::ok;
 			}
-			return status_t::invalid_type;
+			return status::invalid_type;
 		}
 
 		status_t write_column_decimal(rowid_t rowid, colid_t colid, const value_t& value) noexcept
@@ -207,28 +206,28 @@ namespace tucan {
 			if (value.type() == type_t::decimal)
 			{
 				rows_[rowid][colid] = value;
-				return status_t::ok;
+				return status::ok;
 			}
 			if (value.type() == type_t::integer)
 			{
 				rows_[rowid][colid] = value_t(get_value<decimal_t>(value));
-				return status_t::ok;
+				return status::ok;
 			}
-			return status_t::invalid_type;
+			return status::invalid_type;
 		}
 
 		status_t write_column(rowid_t rowid, colid_t colid, const value_t& value) noexcept
 		{
-			if (rowid >= row_count() || colid >= column_count()) return status_t::not_found;
+			if (rowid >= row_count() || colid >= column_count()) return status::not_found;
 			if (!value.is_null())
 			{
 				type_t type = get_column(colid).type;
 				if (type == type_t::integer) return write_column_integer(rowid, colid, value);
 				if (type == type_t::decimal) return write_column_decimal(rowid, colid, value);
-				if (type != value.type())  return status_t::invalid_type;
+				if (type != value.type())  return status::invalid_type;
 			}
 			rows_[rowid][colid] = value;
-			return status_t::ok;
+			return status::ok;
 		}
 
 		status_t calculate_width() noexcept
@@ -334,7 +333,7 @@ namespace tucan {
 		status_t delete_row()
 		{
 			status_t res = record_.delete_row(rowid_);
-			if (res == status_t::ok)
+			if (res == status::ok)
 			{
 				rowid_ = static_cast<rowid_t>((rowid_ >= row_count()) ? (row_count() - 1) : rowid_);
 			}
@@ -363,38 +362,38 @@ namespace tucan {
 
 		status_t goto_row(rowid_t rowid) noexcept
 		{
-			if (rowid >= row_count()) return status_t::not_found;
+			if (rowid >= row_count()) return status::not_found;
 			rowid_ = rowid;
-			return status_t::ok;
+			return status::ok;
 		}
 
 		status_t first_row() noexcept
 		{
 			rowid_ = 0;
-			return ((rowid_ < row_count()) ? status_t::ok : status_t::not_found);
+			return ((rowid_ < row_count()) ? status::ok : status::not_found);
 
 		}
 
 		status_t last_row() noexcept
 		{
 			rowid_ = 0;
-			if (row_count() == 0) return status_t::not_found;
+			if (row_count() == 0) return status::not_found;
 			rowid_ = rowid_t(row_count() - 1);
-			return status_t::ok;
+			return status::ok;
 		}
 
 		status_t next_row() noexcept
 		{
-			if ((rowid_ + 1) >= row_count()) return status_t::not_found;
+			if ((rowid_ + 1) >= row_count()) return status::not_found;
 			++rowid_;
-			return status_t::ok;
+			return status::ok;
 		}
 
 		status_t prior_row() noexcept
 		{
-			if (rowid_ == 0 || row_count() == 0 || rowid_ >= row_count()) return status_t::not_found;
+			if (rowid_ == 0 || row_count() == 0 || rowid_ >= row_count()) return status::not_found;
 			--rowid_;
-			return status_t::ok;
+			return status::ok;
 		}
 	};
 
@@ -473,13 +472,13 @@ namespace tucan {
 
 		status_t create_table(const name_t& name) noexcept
 		{
-			if (!validate(name, "[a-zA-Z][a-zA-Z0-9_]*")) return status_t::invalid_name;
+			if (!validate(name, "[a-zA-Z][a-zA-Z0-9_]*")) return status::invalid_name;
 			for (auto& table : tables_)
 			{
-				if (compare(name, table.first)) return status_t::duplicate;
+				if (compare(name, table.first)) return status::duplicate;
 			}
 			tables_.push_back(std::make_pair(name, table_t(name)));
-			return status_t::ok;
+			return status::ok;
 		}
 
 		status_t drop_table(const name_t& name) noexcept
@@ -489,19 +488,19 @@ namespace tucan {
 				if (compare(name, ptr->first))
 				{
 					tables_.erase(ptr);
-					return status_t::ok;
+					return status::ok;
 				}
 			}
-			return status_t::not_found;
+			return status::not_found;
 		}
 
 		status_t table_exists(const name_t& name) const noexcept
 		{
 			for (auto& table : tables_)
 			{
-				if (compare(name, table.first)) return status_t::ok;
+				if (compare(name, table.first)) return status::ok;
 			}
-			return status_t::not_found;
+			return status::not_found;
 		}
 
 		table_t& get_table(const name_t& name) noexcept

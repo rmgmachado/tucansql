@@ -32,7 +32,6 @@
 namespace tucan {
 
    namespace sql {
-      using status_t = int;
       size_t npos = -1;
    }
 
@@ -88,29 +87,29 @@ namespace tucan {
          return sql::npos;
       }
 
-      sql::status_t execute(const sqlid_t& id) noexcept
+      status_t execute(const sqlid_t& id) noexcept
       {
          if (id != sql::npos)
          {
-            if (execute_tree(parsers_[id].get_tree())) return parser::ok;
+            if (execute_tree(parsers_[id].get_tree())) return status::ok;
             return parsers_[id].get_error_code();
          }
-         return parser::invalid_handle;
+         return status::invalid_handle;
       }
 
-      sql::status_t next(const sqlid_t& id) noexcept
+      status_t next(const sqlid_t& id) noexcept
       {
-         return parser::ok;
+         return status::ok;
       }
 
-      sql::status_t reset(const sqlid_t& id) noexcept
+      status_t reset(const sqlid_t& id) noexcept
       {
-         return parser::ok;
+         return status::ok;
       }
 
-      sql::status_t finalize(const sqlid_t& id) noexcept
+      status_t finalize(const sqlid_t& id) noexcept
       {
-         return parser::ok;
+         return status::ok;
       }
 
       count_t rows_afftected() const noexcept
@@ -202,33 +201,6 @@ namespace tucan {
          return stack(tree).empty();
       }
 
-      inline bool execute_noop(ptree_t* tree) noexcept { return true; }
-      inline bool execute_push_field(ptree_t* tree) noexcept { return true; }
-      inline bool execute_push_table(ptree_t* tree) noexcept { return true; }
-      inline bool execute_push_literal(ptree_t* tree) noexcept { return true; }
-      inline bool execute_minus(ptree_t* tree) noexcept { return true; }
-      inline bool execute_plus(ptree_t* tree) noexcept { return true; }
-      inline bool execute_negate(ptree_t* tree) noexcept { return true; }
-      inline bool execute_multiply(ptree_t* tree) noexcept { return true; }
-      inline bool execute_divide(ptree_t* tree) noexcept { return true; }
-      inline bool execute_add(ptree_t* tree) noexcept { return true; }
-      inline bool execute_subtract(ptree_t* tree) noexcept { return true; }
-      inline bool execute_equal(ptree_t* tree) noexcept { return true; }
-      inline bool execute_not_equal(ptree_t* tree) noexcept { return true; }
-      inline bool execute_less(ptree_t* tree) noexcept { return true; }
-      inline bool execute_less_equal(ptree_t* tree) noexcept { return true; }
-      inline bool execute_greater(ptree_t* tree) noexcept { return true; }
-      inline bool execute_greater_equal(ptree_t* tree) noexcept { return true; }
-      inline bool execute_is_null(ptree_t* tree) noexcept { return true; }
-      inline bool execute_is_not_null(ptree_t* tree) noexcept { return true; }
-      inline bool execute_logical_or(ptree_t* tree) noexcept { return true; }
-      inline bool execute_logical_and(ptree_t* tree) noexcept { return true; }
-      inline bool execute_expr(ptree_t* tree) noexcept { return true; }
-      inline bool execute_where(ptree_t* tree) noexcept { return true; }
-      inline bool execute_where_true(ptree_t* tree) noexcept { return true; }
-      inline bool execute_assign_list(ptree_t* tree) noexcept { return true; }
-      inline bool execute_assign(ptree_t* tree) noexcept { return true; }
-
       inline bool execute_field_def(ptree_t* tree) noexcept
       {
          push(tree, tree->value());
@@ -240,9 +212,6 @@ namespace tucan {
       {
          return true;
       }
-
-      inline bool execute_field_name(ptree_t* tree) noexcept { return true; }
-
 
       inline bool execute_create_table(ptree_t* tree) noexcept
       {
@@ -259,77 +228,66 @@ namespace tucan {
                status = tbl.add_column(colname, coltype.type());
                if (status != status_t::ok)
                {
-                  parser(tree).set_error(parser::table_create_error, std::string("error adding field: " + colname).c_str());
+                  parser(tree).set_error(status::table_create_error, std::string("error adding field: " + colname).c_str());
                   return false;
                }
             }
          }
          if (status == status_t::invalid_name)
          {
-            parser(tree).set_error(parser::table_create_error, std::string("invalid table name: " + tblname).c_str());
+            parser(tree).set_error(status::table_create_error, std::string("invalid table name: " + tblname).c_str());
             return false;
          }
          if (status == status_t::duplicate)
          {
-            parser(tree).set_error(parser::table_create_error, std::string("table already created: " + tblname).c_str());
+            parser(tree).set_error(status::table_create_error, std::string("table already created: " + tblname).c_str());
             return false;
          }
          return true;
       }
 
-      inline bool execute_insert(ptree_t* tree) noexcept { return true; }
-      inline bool execute_insert_values(ptree_t* tree) noexcept { return true; }
-      inline bool execute_update(ptree_t* tree) noexcept { return true; }
-      inline bool execute_update_set(ptree_t* tree) noexcept { return true; }
-      inline bool execute_drop_table(ptree_t* tree) noexcept { return true; }
-      inline bool execute_delete_row(ptree_t* tree) noexcept { return true; }
-      inline bool execute_select(ptree_t* tree) noexcept { return true; }
-      inline bool execute_select_where(ptree_t* tree) noexcept { return true; }
-      inline bool execute_select_from(ptree_t* tree) noexcept { return true; }
-      inline bool execute_field_all(ptree_t* tree) noexcept { return true; }
-
-      inline static std::vector<std::function<bool(ptree_t*)>> table
+      inline static std::array<std::function<bool(ptree_t*)>, 40> execute_dispatch_table =
       {
-           execute_noop
-         , execute_push_field
-         , execute_push_table
-         , execute_push_literal
-         , execute_minus
-         , execute_plus
-         , execute_negate
-         , execute_multiply
-         , execute_divide
-         , execute_add
-         , execute_subtract
-         , execute_equal
-         , execute_not_equal
-         , execute_less
-         , execute_less_equal
-         , execute_greater
-         , execute_greater_equal
-         , execute_is_null
-         , execute_is_not_null
-         , execute_logical_or
-         , execute_logical_and
-         , execute_expr
-         , execute_where
-         , execute_where_true
-         , execute_assign_list
-         , execute_assign
-         , execute_field_def
-         , execute_field_def_list
-         , execute_field_name
-         , execute_create_table
-         , execute_insert
-         , execute_insert_values
-         , execute_update
-         , execute_update_set
-         , execute_drop_table
-         , execute_delete_row
-         , execute_select
-         , execute_select_where
-         , execute_select_from
-         , execute_field_all
+         /* noop 				*/   [](ptree_t* tree) -> bool { return true; }
+         /* push_field 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* push_table 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* push_literal 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* minus 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* plus 				*/ , [](ptree_t* tree) -> bool { return true; }
+         /* negate 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* multiply 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* divide 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* add 				*/ , [](ptree_t* tree) -> bool { return true; }
+         /* subtract 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* equal 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* not_equal 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* less 				*/ , [](ptree_t* tree) -> bool { return true; }
+         /* less_equal 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* greater 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* greater_equal 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* is_null 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* is_not_null 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* logical_or 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* logical_and 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* expr 				*/ , [](ptree_t* tree) -> bool { return true; }
+         /* where 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* where_true 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* assign_list 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* assign 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* field_def 		*/ , [](ptree_t* tree) -> bool { return execute_field_def(tree); }
+         /* field_def_list */ , [](ptree_t* tree) -> bool { return execute_field_def_list(tree); }
+         /* field_name 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* create_table 	*/ , [](ptree_t* tree) -> bool { return execute_create_table(tree); }
+         /* insert 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* insert_values 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* update 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* update_set 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* drop_table 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* delete_row 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* select 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* select_where 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* select_from 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* field_all 		*/ , [](ptree_t* tree) -> bool { return true; }
       };
 
       inline bool execute(ptree_t* tree) noexcept
@@ -337,7 +295,7 @@ namespace tucan {
          if (!tree) return true;
          if (execute(tree->left()) && execute(tree->right()))
          {
-            return runtime::table[tree->opcode()](tree);
+            return runtime::execute_dispatch_table[tree->opcode()](tree);
          }
          return false;
       }
