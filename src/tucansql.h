@@ -26,6 +26,8 @@
 \*****************************************************************************/
 #pragma once
 
+#include <map>
+
 #include "memdb.h"
 #include "sqlparser.h"
 
@@ -43,12 +45,20 @@ namespace tucan {
    class sql_t
    {
       database_t db_;
-      std::vector<parser_t> parsers_;
+      std::map<sqlid_t, parser_t> parsers_;
       int error_;
       text_t errmsg_;
+      sqlid_t id_;
 
    public:
-      sql_t() = default;
+      sql_t() noexcept
+         : db_()
+         , parsers_()
+         , error_(status::ok)
+         , errmsg_("")
+         , id_(0)
+      {}
+
       ~sql_t() = default;
       sql_t(const sql_t&) = delete;
       sql_t(sql_t&&) = default;
@@ -80,10 +90,13 @@ namespace tucan {
       {
          error_ = 0;
          errmsg_ = "No errors detected";
-         parsers_.push_back(parser_t(db_));
-         sqlid_t id = int(std::distance(parsers_.begin(), parsers_.end())) - 1;
-         if (parsers_[id].run(stmt)) return id;
-         set_error(parsers_[id].get_error_code(), parsers_[id].get_error_message());
+         const auto [it, success] = parsers_.insert({id_, parser_t()});
+         if (success)
+         {
+            sqlid_t id = id_++;
+            if (parsers_[id].run(&db_, stmt)) return id;
+            set_error(parsers_[id].get_error_code(), parsers_[id].get_error_message());
+         }
          return sql::npos;
       }
 
@@ -109,7 +122,13 @@ namespace tucan {
 
       status_t finalize(const sqlid_t& id) noexcept
       {
-         return status::ok;
+         auto it = parsers_.find(id);
+         if (it != parsers_.end())
+         {
+            parsers_.erase(it);
+            return status::ok;
+         }
+         return status::invalid_handle;
       }
 
       count_t rows_afftected() const noexcept

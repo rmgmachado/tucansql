@@ -28,7 +28,6 @@
 
 #include <functional>
 
-
 #include "value.h"
 #include "scanner.h"
 #include "ptree.h"
@@ -47,7 +46,7 @@ namespace tucan {
       std::string errmsg_;
       ptree_t* ptree_;
       scanner_t scan_;
-      database_t& db_;
+      database_t* db_;
       name_t table_;
       std::vector<std::shared_ptr<ptree_t>> nodes_;
       table_t result_;
@@ -55,20 +54,19 @@ namespace tucan {
       count_t rows_affected_;
 
    public:
-      parser_t() = default;
       ~parser_t() = default;
       parser_t(const parser_t&) = default;
       parser_t(parser_t&&) = default;
       parser_t& operator=(const parser_t&) = default;
       parser_t& operator=(parser_t&&) = default;
 
-      parser_t(database_t& db) noexcept
+      parser_t() noexcept
          : stmt_()
          , error_(status::ok)
          , errmsg_()
          , ptree_(nullptr)
          , scan_()
-         , db_(db)
+         , db_(nullptr)
          , table_()
          , nodes_()
          , result_()
@@ -76,8 +74,9 @@ namespace tucan {
          , rows_affected_(0)
       {}
 
-      bool run(const text_t& stmt) noexcept
+      bool run(database_t* db, const text_t& stmt) noexcept
       {
+         db_ = db;
          stmt_ = stmt;
          errmsg_ = "No errors detected";
          ptree_ = nullptr;
@@ -127,7 +126,7 @@ namespace tucan {
 
       database_t& database() noexcept
       {
-         return db_;
+         return *db_;
       }
 
       name_t table() const noexcept

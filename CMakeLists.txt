@@ -16,4 +16,5 @@ BISON_TARGET(syntax src/sqlsyntax.y "${CMAKE_CURRENT_BINARY_DIR}/sqlsyntax.cpp" 
 # add the executable
 add_executable(tucansql tests/test_datetime.cpp tests/test_decimal.cpp tests/test_memdb.cpp 
                         tests/test_scanner.cpp tests/test_sqlparser.cpp 
-                        tests/test_tucansql.cpp tests/xpunit.cpp ${BISON_syntax_OUTPUT_SOURCE})
+                        tests/test_tucansql.cpp tests/xpunit.cpp 
+                        ${BISON_syntax_OUTPUT_SOURCE})

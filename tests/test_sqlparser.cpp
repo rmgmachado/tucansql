@@ -35,17 +35,17 @@ TEST_CASE("sqlparser_t tests", "[sqlparser]")
    {
       std::string stmt = "CREATE TABLE table1 (field1 boolean)";
       database_t db;
-      parser_t parser(db);
+      parser_t parser;
 
-      REQUIRE(parser.run(stmt));
+      REQUIRE(parser.run(&db, stmt));
    }
    SECTION("Test parsing of CREATE TABLE with syntax error")
    {
       std::string stmt = "CREATE TABLE table1 (field1 boolean, field2)";
       database_t db;
-      parser_t parser(db);
+      parser_t parser;
 
-      REQUIRE(parser.run(stmt) == false);
+      REQUIRE(parser.run(&db, stmt) == false);
       REQUIRE(parser.get_error_code() == status::syntax_error);
       REQUIRE(parser.get_error_message().length() > 0);
    }
@@ -53,9 +53,9 @@ TEST_CASE("sqlparser_t tests", "[sqlparser]")
    {
       std::string stmt = "CREATE TABLE table1 (field1 boolean, field2 decimal, field1 integer)";
       database_t db;
-      parser_t parser(db);
+      parser_t parser;
 
-      REQUIRE(parser.run(stmt) == false);
+      REQUIRE(parser.run(&db, stmt) == false);
       REQUIRE(parser.get_error_code() == status::duplicate);
       REQUIRE(parser.get_error_message().length() > 0);
    }
