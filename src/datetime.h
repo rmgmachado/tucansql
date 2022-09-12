@@ -63,6 +63,11 @@
 		return 0;
 	}
 
+	inline void gmtime_r(time_t* t, struct tm* tm)
+	{
+		gmtime_s(tm, t);
+	}
+
 	#ifdef __cplusplus
 		} /* extern "C" */
 	#endif
