@@ -284,7 +284,7 @@ sql_column_name_list
 sql_column_assign_list 
 	: sql_column_assign
 	  {
-			$$ = make_ptree(get_parser(handle), ptree::assign_list, token_t(), value_t(), $1)
+			$$ = make_ptree(get_parser(handle), ptree::assign_list, token_t(), value_t(), $1);
 	  }
 	| sql_column_assign_list ',' sql_column_assign
 	  {

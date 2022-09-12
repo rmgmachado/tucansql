@@ -185,7 +185,27 @@ namespace tucan {
 			return retval;
 		}
 
-		explicit operator int64_t() const  noexcept
+		operator char() const noexcept
+		{
+			return char(dec_ / decimal::precision[SCALE]);
+		}
+
+		operator short() const noexcept
+		{
+			return short(dec_ / decimal::precision[SCALE]);
+		}
+
+		operator int() const noexcept
+		{
+			return int(dec_ / decimal::precision[SCALE]);
+		}
+
+		operator long() const noexcept
+		{
+			return long(dec_ / decimal::precision[SCALE]);
+		}
+
+		explicit operator long long() const  noexcept
 		{
 			return dec_ / decimal::precision[SCALE];
 		}

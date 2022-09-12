@@ -354,7 +354,7 @@ namespace tucan {
 		struct tm tm;
 
 		clock_gettime(0, &spec);
-		gmtime_s(&tm, &spec.tv_sec);
+		gmtime_r(&spec.tv_sec, &tm);
 		return make_datetime(tm.tm_year, (tm.tm_mon + 1), tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (spec.tv_nsec / 1000));
 	}
 

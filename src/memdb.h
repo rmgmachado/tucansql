@@ -242,6 +242,7 @@ namespace tucan {
 					column.width = (width > column.width) ? width : column.width;
 				}
 			}
+			return status::ok;
 		}
 
 	};
