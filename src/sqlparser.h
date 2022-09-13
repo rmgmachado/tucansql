@@ -242,7 +242,7 @@ namespace tucan {
          return check_create_table_field_duplicated(tree);
       }
 
-      inline static std::array<std::function<bool(ptree_t*)>, 39> context_dispatch_table =
+      inline static std::array<std::function<bool(ptree_t*)>, 40> context_dispatch_table =
       {
          /* noop 				*/   [](ptree_t* tree) -> bool { return true; }
          /* push_field 		*/ , [](ptree_t* tree) -> bool { return true; }
@@ -274,6 +274,7 @@ namespace tucan {
          /* field_name 		*/ , [](ptree_t* tree) -> bool { return true; }
          /* create_table 	*/ , [](ptree_t* tree) -> bool { return check_create_table(tree); }
          /* insert 			*/ , [](ptree_t* tree) -> bool { return true; }
+         /* insert_names	*/ , [](ptree_t* tree) -> bool { return true; }
          /* insert_values 	*/ , [](ptree_t* tree) -> bool { return true; }
          /* update 			*/ , [](ptree_t* tree) -> bool { return true; }
          /* update_set 		*/ , [](ptree_t* tree) -> bool { return true; }

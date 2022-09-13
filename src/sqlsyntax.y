@@ -101,7 +101,6 @@ void sql_error(void* handle, const char* s);
 %type		<ytree>	sql_add_expression sql_mult_expression sql_unary_expression 
 %type		<ytree>	sql_primary_expression sql_literal sql_identifier
 %type		<ytree>	sql_select_expression_list sql_select_expression
-%type		<ytree>	sql_insert_column_name_list_opt
 %type		<ytree>	sql_select_expression_list_or_star
 
 /*****************************************************************************\
@@ -142,10 +141,18 @@ sql_command
 			ptree_t* create_table = make_ptree(get_parser(handle), ptree::create_table, $3, make_text_value($3->text()), $5);
 			$$ = create_table;
 	  }
-	| INSERT INTO IDENTIFIER sql_insert_column_name_list_opt VALUES '(' sql_expression_list ')'
+	| INSERT INTO IDENTIFIER '(' sql_column_name_list ')' VALUES '(' sql_expression_list ')'
 	  {
-			ptree_t* left = make_ptree(get_parser(handle), ptree::insert_values, $5, value_t(), $4, $7);
-			$$ = make_ptree(get_parser(handle), ptree::insert, $3, make_text_value($3->text()), left);
+			ptree_t* values = make_ptree(get_parser(handle), ptree::insert_values, $3, value_t(), $9);
+			ptree_t* names = make_ptree(get_parser(handle), ptree::insert_names, $3, value_t(), $5, values);
+			ptree_t* insert = make_ptree(get_parser(handle), ptree::insert, $3, value_t(), names);
+			$$ = insert;
+	  }
+	| INSERT INTO IDENTIFIER VALUES '(' sql_expression_list ')'
+	  {
+			ptree_t* values = make_ptree(get_parser(handle), ptree::insert_values, $3, value_t(), $6);
+			ptree_t* insert = make_ptree(get_parser(handle), ptree::insert, $3, value_t(), values);
+			$$ = insert;
 	  }
 	| UPDATE IDENTIFIER SET sql_column_assign_list sql_where_clause_opt
 	  {
@@ -260,17 +267,6 @@ sql_column_definition
 	  }
 	;
 	
-sql_insert_column_name_list_opt
-	:
-	  {
-			$$ = 0;
-	  }
-	| '(' sql_column_name_list ')'
-	  {
-			$$ = $2;
-	  }
-   ;
-
 sql_column_name_list
 	: IDENTIFIER
 	  {
@@ -278,7 +274,9 @@ sql_column_name_list
 	  }
 	| sql_column_name_list ',' IDENTIFIER
 	  {
-			$$ = make_ptree(get_parser(handle), ptree::field_name, $3, value_t(), 0, $1);
+			ptree_t* name = make_ptree(get_parser(handle), ptree::field_name, $3, value_t());
+			name->left($1);
+			$$ = name;
 	  }
 	;
 	
@@ -326,8 +324,9 @@ sql_expression_list
 	  }	  
 	| sql_expression_list ',' sql_expression
 	  {
-			$3->right($1);
-			$$ = $3;
+			ptree_t* expr = $3;
+			expr->right($1);
+			$$ = expr;
 	  }
 	;
 	

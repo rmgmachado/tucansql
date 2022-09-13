@@ -63,6 +63,7 @@ namespace tucan {
          , field_name
          , create_table
          , insert
+         , insert_names
          , insert_values
          , update
          , update_set
