@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_STANDARD 17)
 
 # include folders
+FILE(GLOB_RECURSE MY_HEADERS "src/*.h")
 include_directories(src tests)
 
 find_package(BISON)
@@ -17,4 +18,4 @@ BISON_TARGET(syntax src/sqlsyntax.y "${CMAKE_CURRENT_BINARY_DIR}/sqlsyntax.cpp" 
 add_executable(tucansql tests/test_datetime.cpp tests/test_decimal.cpp tests/test_memdb.cpp 
                         tests/test_scanner.cpp tests/test_sqlparser.cpp 
                         tests/test_tucansql.cpp tests/xpunit.cpp 
-                        ${BISON_syntax_OUTPUT_SOURCE})
+                        ${BISON_syntax_OUTPUT_SOURCE} ${MY_HEADERS})
