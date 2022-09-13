@@ -26,7 +26,7 @@
 \*****************************************************************************/
 #pragma once
 
-#include <stack>
+#include <deque>
 
 #include "value.h"
 
@@ -34,7 +34,7 @@ namespace tucan {
 
    class stack_t
    {
-      std::stack<value_t> stack_;
+      std::deque<value_t> stack_;
 
    public:
       stack_t() = default;
@@ -44,16 +44,11 @@ namespace tucan {
       stack_t& operator=(const stack_t&) = default;
       stack_t& operator=(stack_t&&) = default;
 
-      void push(const value_t& value) noexcept
+      value_t top(size_t n = 0) const noexcept
       {
-         stack_.push(value);
-      }
-
-      value_t top() const noexcept
-      {
-         if (!stack_.empty())
+         if (stack_.size() > n)
          {
-            return stack_.top();
+            return stack_[n];
          }
          return value_t();
       }
@@ -62,11 +57,21 @@ namespace tucan {
       {
          if (!stack_.empty())
          {
-            value_t value = stack_.top();
-            stack_.pop();
+            value_t value = stack_.front();
+            stack_.pop_front();
             return value;
          }
          return value_t();
+      }
+
+      void push(const value_t& value) noexcept
+      {
+         stack_.push_front(value);
+      }
+
+      void push_back(const value_t& value) noexcept
+      {
+         stack_.push_back(value);
       }
 
       bool empty() const noexcept
@@ -81,10 +86,7 @@ namespace tucan {
 
       void clear() noexcept
       {
-         while (!stack_.empty())
-         {
-            stack_.pop();
-         }
+         stack_.clear();
       }
    };
 

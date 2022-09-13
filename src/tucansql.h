@@ -195,40 +195,10 @@ namespace tucan {
          return parser(tree).database();
       }
 
-      value_t top(ptree_t* tree) noexcept
-      {
-         return stack(tree).top();
-      }
-
-      value_t pop(ptree_t* tree) noexcept
-      {
-         return stack(tree).pop();
-      }
-
-      void push(ptree_t* tree, const value_t& value) noexcept
-      {
-         stack(tree).push(value);
-      }
-
-      size_t size(ptree_t* tree) noexcept
-      {
-         return stack(tree).size();
-      }
-
-      bool empty(ptree_t* tree) noexcept
-      {
-         return stack(tree).empty();
-      }
-
       inline bool execute_field_def(ptree_t* tree) noexcept
       {
-         push(tree, tree->value());
-         push(tree, value_t(tree->token().text()));
-         return true;
-      }
-
-      inline bool execute_field_def_list(ptree_t* tree) noexcept
-      {
+         stack(tree).push_back(value_t(tree->token().text()));
+         stack(tree).push_back(tree->value());
          return true;
       }
 
@@ -239,10 +209,10 @@ namespace tucan {
          if (status == status_t::ok)
          {
             table_t& tbl = database(tree).get_table(tblname);
-            while (!empty(tree))
+            while (!stack(tree).empty())
             {
-               text_t colname = get_value<text_t>(tree_stack(tree).pop());
-               value_t coltype = tree_stack(tree).pop();
+               text_t colname = get_value<text_t>(stack(tree).pop());
+               value_t coltype = stack(tree).pop();
 
                status = tbl.add_column(colname, coltype.type());
                if (status != status_t::ok)
@@ -265,7 +235,7 @@ namespace tucan {
          return true;
       }
 
-      inline static std::array<std::function<bool(ptree_t*)>, 40> execute_dispatch_table =
+      inline static std::array<std::function<bool(ptree_t*)>, 39> execute_dispatch_table =
       {
          /* noop 				*/   [](ptree_t* tree) -> bool { return true; }
          /* push_field 		*/ , [](ptree_t* tree) -> bool { return true; }
@@ -294,7 +264,6 @@ namespace tucan {
          /* assign_list 	*/ , [](ptree_t* tree) -> bool { return true; }
          /* assign 			*/ , [](ptree_t* tree) -> bool { return true; }
          /* field_def 		*/ , [](ptree_t* tree) -> bool { return execute_field_def(tree); }
-         /* field_def_list */ , [](ptree_t* tree) -> bool { return execute_field_def_list(tree); }
          /* field_name 		*/ , [](ptree_t* tree) -> bool { return true; }
          /* create_table 	*/ , [](ptree_t* tree) -> bool { return execute_create_table(tree); }
          /* insert 			*/ , [](ptree_t* tree) -> bool { return true; }

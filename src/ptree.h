@@ -60,7 +60,6 @@ namespace tucan {
          , assign_list
          , assign
          , field_def
-         , field_def_list
          , field_name
          , create_table
          , insert

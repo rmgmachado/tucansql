@@ -216,13 +216,14 @@ sql_select_expression
 sql_column_definition_list
 	: sql_column_definition
 	  {
-			ptree_t* coldef = make_ptree(get_parser(handle), ptree::field_def_list, token_t(), value_t(), $1);
+			ptree_t* coldef = $1;
 			$$ = coldef;
 	  }
 	| sql_column_definition_list ',' sql_column_definition
 	  {
-			ptree_t* coldef_list = make_ptree(get_parser(handle), ptree::field_def_list, token_t(), value_t(), $3, $1);
-			$$ = coldef_list;
+			ptree_t* coldef = $3;
+			coldef->left($1);
+			$$ = coldef;
 	  }
 	;
 	
