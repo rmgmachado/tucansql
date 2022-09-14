@@ -148,5 +148,11 @@ TEST_CASE("datetime_t ostream operator tests", "[datetime]")
 		str = std::to_string(dt, 't');
 		REQUIRE(str == "2022-08-22t00:43:17.1234");
 	}
+	SECTION("datetime_t current time")
+	{
+		datetime_t dt = today();
+		std::string dtstr = std::to_string(dt);
+		REQUIRE(dtstr.length() > 0);
+	}
 }
 

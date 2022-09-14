@@ -175,7 +175,7 @@ sql_command
 	  {
 			ptree_t* where = make_ptree(get_parser(handle), ptree::select_where, nullptr, value_t(), $5, $2);
 			ptree_t* from = make_ptree(get_parser(handle), ptree::select_from, $4, value_t(), nullptr, where);
-			$$ = make_ptree(get_parser(handle), ptree::select, $1, value_t(), from);
+			$$ = make_ptree(get_parser(handle), ptree::select, $4, value_t(), from);
 	  }
 	;
 	
@@ -333,7 +333,7 @@ sql_expression_list
 sql_expression
 	: sql_or_expression
 	  {
-			$$ = make_ptree(get_parser(handle), ptree::expr, nullptr, value_t(), $1);
+			$$ = make_ptree(get_parser(handle), ptree::expr, nullptr, $1->value(), $1);
 	  }
 	;
 	
@@ -497,11 +497,6 @@ sql_identifier
 	: IDENTIFIER
 	  {
 			$$ = make_ptree(get_parser(handle), ptree::push_field, $1, value_t());
-	  }
-	| IDENTIFIER '.' IDENTIFIER
-	  {
-			ptree_t* left = make_ptree(get_parser(handle), ptree::push_table, $1, value_t());
-			$$ = make_ptree(get_parser(handle), ptree::push_field, $3, value_t(), left);
 	  }
 	;
 	

@@ -360,7 +360,7 @@ namespace tucan {
 
 		clock_gettime(0, &spec);
 		gmtime_r(&spec.tv_sec, &tm);
-		return make_datetime(tm.tm_year, (tm.tm_mon + 1), tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (spec.tv_nsec / 1000));
+		return make_datetime(tm.tm_year + 1900, (tm.tm_mon + 1), tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (spec.tv_nsec / 1000));
 	}
 
 	inline std::ostream& operator<<(std::ostream& os, const datetime_t& dt) noexcept
@@ -405,12 +405,16 @@ namespace std {
 
 	inline std::string to_string(const tucan::datetime_t& dt, char separator = ' ')
 	{
-		std::ostringstream os(std::move(std::ostringstream() << dt));
+		std::ostringstream os;
+		os << dt;
 		std::string str = os.str();
-		size_t index = str.find(' ');
-		if (index != std::string::npos)
+		if (separator != ' ')
 		{
-			str[index] = separator;
+			size_t index = str.find(' ');
+			if (index != std::string::npos)
+			{
+				str[index] = separator;
+			}
 		}
 		return str;
 	}

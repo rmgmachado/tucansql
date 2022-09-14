@@ -117,6 +117,23 @@ namespace tucan {
          return opcode_;
       }
 
+      type_t type() const noexcept
+      {
+         return value_.type();
+      }
+
+      type_t left_type() const noexcept
+      {
+         if (!left_) return type_t::null;
+         return left_->type();
+      }
+
+      type_t right_type() const noexcept
+      {
+         if (!right_) return type_t::null;
+         return right_->type();
+      }
+
       token_t token() const noexcept
       {
          return token_;

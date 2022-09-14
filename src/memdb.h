@@ -441,6 +441,16 @@ namespace tucan {
 			return record_.row_count();
 		}
 
+		bool column_exists(const name_t& name) const noexcept
+		{
+			return (record_.find_column(name) != memdb::npos);
+		}
+
+		type_t column_type(const name_t& name) noexcept
+		{
+			return record_.get_column(name).type;
+		}
+
 		status_t add_column(const name_t& name, type_t type) noexcept
 		{
 			return record_.add_column(name, type);

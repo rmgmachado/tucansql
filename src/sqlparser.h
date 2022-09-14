@@ -49,7 +49,6 @@ namespace tucan {
       database_t* db_;
       name_t table_;
       std::vector<std::shared_ptr<ptree_t>> nodes_;
-      table_t result_;
       stack_t stack_;
       count_t rows_affected_;
 
@@ -69,7 +68,6 @@ namespace tucan {
          , db_(nullptr)
          , table_()
          , nodes_()
-         , result_()
          , stack_()
          , rows_affected_(0)
       {}
@@ -82,7 +80,6 @@ namespace tucan {
          ptree_ = nullptr;
          table_ = "";
          nodes_.clear();
-         result_.clear();
          stack_.clear();
          rows_affected_ = 0;
          scan_.run(stmt_);
@@ -158,7 +155,6 @@ namespace tucan {
       {
          error_ = status::ok;
          errmsg_ = "";
-         result_.clear();
          stack_.clear();
          rows_affected_ = 0;
       }
@@ -201,6 +197,70 @@ namespace tucan {
    }
 
    namespace context {
+
+      inline bool set_tree_type(ptree_t* tree, const value_t& value) noexcept
+      {
+         tree->value(value);
+         return true;
+      }
+
+      inline bool check_push_field(ptree_t* tree) noexcept
+      {
+         parser_t* parser(tree_parser(tree));
+         if (!parser->database().table_exists(parser->table()))
+         {
+            parser->set_error(status::table_not_found, "table does not exist", tree->token());
+            return false;
+         }
+         if (!parser->database().get_table(parser->table()).column_exists(tree->token().text()))
+         {
+            parser->set_error(status::field_not_found, "column does not exist", tree->token());
+            return false;
+         }
+         tree->value(make_value(parser->database().get_table(parser->table()).column_type(tree->token().text())));
+         return true;
+      }
+
+      inline bool check_minus(ptree_t* tree) noexcept
+      {
+         if (tree->type() == type_t::integer || tree->type() == type_t::decimal) return true;
+         tree_parser(tree)->set_error(status::invalid_type, "operator '-' invalid type", tree->token());
+         return false;
+      }
+
+      inline bool check_plus(ptree_t* tree) noexcept
+      {
+         if (tree->type() == type_t::integer || tree->type() == type_t::decimal) return true;
+         tree_parser(tree)->set_error(status::invalid_type, "operator '+' invalid type", tree->token());
+         return false;
+      }
+
+      inline bool check_negate(ptree_t* tree) noexcept
+      {
+         if (tree->type() == type_t::boolean) return true;
+         tree_parser(tree)->set_error(status::invalid_type, "operator '!' invalid type", tree->token());
+         return false;
+      }
+
+      inline bool is_numeric_type(ptree_t* tree)
+      {
+         return (tree->type() == type_t::integer || tree->type() == type_t::decimal || tree->type() == type_t::boolean);
+      }
+
+      inline bool check_binary_type(ptree_t* tree, type_t type) noexcept
+      {
+         return tree->left_type() == type && tree->right_type() == type;
+      }
+
+      inline bool check_binary_numeric(ptree_t* tree) noexcept
+      {
+         return is_numeric_type(tree->left()) && is_numeric_type(tree->right());
+      }
+
+      inline bool check_binary_equal_type(ptree_t* tree)
+      {
+         return check_binary_numeric(tree) || (tree->left_type() == tree->right_type());
+      }
 
       inline bool check_field_def(ptree_t* tree) noexcept 
       { 
@@ -245,26 +305,26 @@ namespace tucan {
       inline static std::array<std::function<bool(ptree_t*)>, 40> context_dispatch_table =
       {
          /* noop 				*/   [](ptree_t* tree) -> bool { return true; }
-         /* push_field 		*/ , [](ptree_t* tree) -> bool { return true; }
+         /* push_field 		*/ , [](ptree_t* tree) -> bool { return check_push_field(tree); }
          /* push_table 		*/ , [](ptree_t* tree) -> bool { return true; }
          /* push_literal 	*/ , [](ptree_t* tree) -> bool { return true; }
-         /* minus 			*/ , [](ptree_t* tree) -> bool { return true; }
-         /* plus 				*/ , [](ptree_t* tree) -> bool { return true; }
-         /* negate 			*/ , [](ptree_t* tree) -> bool { return true; }
-         /* multiply 		*/ , [](ptree_t* tree) -> bool { return true; }
-         /* divide 			*/ , [](ptree_t* tree) -> bool { return true; }
-         /* add 				*/ , [](ptree_t* tree) -> bool { return true; }
-         /* subtract 		*/ , [](ptree_t* tree) -> bool { return true; }
-         /* equal 			*/ , [](ptree_t* tree) -> bool { return true; }
-         /* not_equal 		*/ , [](ptree_t* tree) -> bool { return true; }
-         /* less 				*/ , [](ptree_t* tree) -> bool { return true; }
-         /* less_equal 		*/ , [](ptree_t* tree) -> bool { return true; }
-         /* greater 			*/ , [](ptree_t* tree) -> bool { return true; }
-         /* greater_equal 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* minus 			*/ , [](ptree_t* tree) -> bool { return check_minus(tree); }
+         /* plus 				*/ , [](ptree_t* tree) -> bool { return check_plus(tree); }
+         /* negate 			*/ , [](ptree_t* tree) -> bool { return check_negate(tree); }
+         /* multiply 		*/ , [](ptree_t* tree) -> bool { return check_binary_numeric(tree); }
+         /* divide 			*/ , [](ptree_t* tree) -> bool { return check_binary_numeric(tree); }
+         /* add 				*/ , [](ptree_t* tree) -> bool { return check_binary_numeric(tree) || check_binary_type(tree, type_t::text); }
+         /* subtract 		*/ , [](ptree_t* tree) -> bool { return check_binary_numeric(tree); }
+         /* equal 			*/ , [](ptree_t* tree) -> bool { return check_binary_equal_type(tree); }
+         /* not_equal 		*/ , [](ptree_t* tree) -> bool { return check_binary_equal_type(tree); }
+         /* less 				*/ , [](ptree_t* tree) -> bool { return check_binary_equal_type(tree); }
+         /* less_equal 		*/ , [](ptree_t* tree) -> bool { return check_binary_equal_type(tree); }
+         /* greater 			*/ , [](ptree_t* tree) -> bool { return check_binary_equal_type(tree); }
+         /* greater_equal 	*/ , [](ptree_t* tree) -> bool { return check_binary_equal_type(tree); }
          /* is_null 			*/ , [](ptree_t* tree) -> bool { return true; }
          /* is_not_null 	*/ , [](ptree_t* tree) -> bool { return true; }
-         /* logical_or 		*/ , [](ptree_t* tree) -> bool { return true; }
-         /* logical_and 	*/ , [](ptree_t* tree) -> bool { return true; }
+         /* logical_or 		*/ , [](ptree_t* tree) -> bool { return check_binary_numeric(tree); }
+         /* logical_and 	*/ , [](ptree_t* tree) -> bool { return check_binary_numeric(tree); }
          /* expr 				*/ , [](ptree_t* tree) -> bool { return true; }
          /* where 			*/ , [](ptree_t* tree) -> bool { return true; }
          /* where_true 		*/ , [](ptree_t* tree) -> bool { return true; }
@@ -287,9 +347,18 @@ namespace tucan {
       };
    } // namespace context
 
+   inline void discover_table_name(ptree_t* tree) noexcept
+   {
+      if (tree && tree->opcode() == ptree::insert)
+      {
+         tree_parser(tree)->table(tree->token().text());
+      }
+   }
+
    inline bool check_context(ptree_t* tree) noexcept
    {
       if (!tree) return true;
+      discover_table_name(tree);
       if (check_context(tree->left()) && check_context(tree->right()))
       {
          return context::context_dispatch_table[tree->opcode()](tree);

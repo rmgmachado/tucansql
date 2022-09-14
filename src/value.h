@@ -218,6 +218,20 @@ namespace tucan {
       return value_t(make_datetime(text));
    }
 
+   inline value_t make_value(type_t type) noexcept
+   {
+      switch (type)
+      {
+      case type_t::boolean: return value_t(false);
+      case type_t::integer: return value_t(value_t(0ll));
+      case type_t::decimal: return value_t(decimal_t());
+      case type_t::datetime: return value_t(datetime_t());
+      case type_t::text: return value_t(text_t());
+      case type_t::binary: return value_t(binary_t());
+      }
+      return value_t();
+   }
+
    template <typename T>
    inline void get_value(const value_t& value, T& out) noexcept
    {

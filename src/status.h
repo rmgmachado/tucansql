@@ -39,6 +39,8 @@ namespace tucan {
          , table_create_error
          , invalid_handle
          , not_found
+         , field_not_found
+         , table_not_found
          , invalid_type
          , empty
       };
